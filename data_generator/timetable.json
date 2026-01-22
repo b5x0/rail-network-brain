@@ -1,0 +1,91 @@
+[
+  {
+    "train_id": "T-101",
+    "train_profile": {
+      "id": "T-101",
+      "type": "Passenger_HighSpeed",
+      "length": 220,
+      "mass": 450,
+      "max_speed": 160,
+      "gauge": "G1",
+      "braking_lambda": 140,
+      "supported_signaling": [
+        "ETCS_L1",
+        "ETCS_L2"
+      ]
+    },
+    "route": [
+      {
+        "station_id": "Station_Tunis_Central",
+        "arrival": "13:00",
+        "departure": "13:15",
+        "platform_id": "Platform-Tunis_Central-1"
+      },
+      {
+        "station_id": "Station_Sfax_Junction",
+        "arrival": "14:30",
+        "departure": "14:45",
+        "platform_id": "Platform-Sfax_Junction-1"
+      }
+    ]
+  },
+  {
+    "train_id": "T-204",
+    "train_profile": {
+      "id": "T-204",
+      "type": "Freight_Heavy",
+      "length": 750,
+      "mass": 2200,
+      "max_speed": 80,
+      "gauge": "GC",
+      "braking_lambda": 65,
+      "supported_signaling": [
+        "Manual_Block",
+        "ETCS_L1"
+      ]
+    },
+    "route": [
+      {
+        "station_id": "Station_Tunis_Central",
+        "arrival": "09:00",
+        "departure": "09:15",
+        "platform_id": "Platform-Tunis_Central-1"
+      },
+      {
+        "station_id": "Station_Sfax_Junction",
+        "arrival": "10:30",
+        "departure": "10:45",
+        "platform_id": "Platform-Sfax_Junction-1"
+      }
+    ]
+  },
+  {
+    "train_id": "T-305",
+    "train_profile": {
+      "id": "T-305",
+      "type": "Regional_Commuter",
+      "length": 180,
+      "mass": 300,
+      "max_speed": 120,
+      "gauge": "G1",
+      "braking_lambda": 110,
+      "supported_signaling": [
+        "ETCS_L1"
+      ]
+    },
+    "route": [
+      {
+        "station_id": "Station_Tunis_Central",
+        "arrival": "18:00",
+        "departure": "18:15",
+        "platform_id": "Platform-Tunis_Central-1"
+      },
+      {
+        "station_id": "Station_Sfax_Junction",
+        "arrival": "19:30",
+        "departure": "19:45",
+        "platform_id": "Platform-Sfax_Junction-1"
+      }
+    ]
+  }
+]

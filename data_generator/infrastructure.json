@@ -1,0 +1,308 @@
+[
+  {
+    "id": "Platform-Tunis_Central-1",
+    "type": "Platform",
+    "station_group_id": "Station_Tunis_Central",
+    "connected_to": [
+      "Station_Tunis_Central"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 150.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Platform-Tunis_Central-2",
+    "type": "Platform",
+    "station_group_id": "Station_Tunis_Central",
+    "connected_to": [
+      "Station_Tunis_Central"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 400.0,
+      "cleared_gauge": "GC",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Station_Tunis_Central",
+    "type": "Station_Hub",
+    "name": "Gare de Tunis_Central",
+    "location": {
+      "lat": 36.8,
+      "lon": 10.1
+    },
+    "connected_to": [
+      "Platform-Tunis_Central-1",
+      "Platform-Tunis_Central-2"
+    ]
+  },
+  {
+    "id": "Platform-Sfax_Junction-1",
+    "type": "Platform",
+    "station_group_id": "Station_Sfax_Junction",
+    "connected_to": [
+      "Station_Sfax_Junction"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 300.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Platform-Sfax_Junction-2",
+    "type": "Platform",
+    "station_group_id": "Station_Sfax_Junction",
+    "connected_to": [
+      "Station_Sfax_Junction"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 150.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Station_Sfax_Junction",
+    "type": "Station_Hub",
+    "name": "Gare de Sfax_Junction",
+    "location": {
+      "lat": 36.3,
+      "lon": 10.2
+    },
+    "connected_to": [
+      "Platform-Sfax_Junction-1",
+      "Platform-Sfax_Junction-2"
+    ]
+  },
+  {
+    "id": "Track-Station_Tunis_Central-to-Station_Sfax_Junction",
+    "type": "MainLine",
+    "connected_to": [
+      "Station_Tunis_Central",
+      "Station_Sfax_Junction"
+    ],
+    "payload_constraints": {
+      "length_km": 49,
+      "max_gradient_permille": 0.0,
+      "signaling_system": "ETCS_L2",
+      "max_axle_load_tonnes": 22.5
+    }
+  },
+  {
+    "id": "Platform-Sousse_North-1",
+    "type": "Platform",
+    "station_group_id": "Station_Sousse_North",
+    "connected_to": [
+      "Station_Sousse_North"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 400.0,
+      "cleared_gauge": "GC",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Platform-Sousse_North-2",
+    "type": "Platform",
+    "station_group_id": "Station_Sousse_North",
+    "connected_to": [
+      "Station_Sousse_North"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 300.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Station_Sousse_North",
+    "type": "Station_Hub",
+    "name": "Gare de Sousse_North",
+    "location": {
+      "lat": 35.8,
+      "lon": 10.299999999999999
+    },
+    "connected_to": [
+      "Platform-Sousse_North-1",
+      "Platform-Sousse_North-2"
+    ]
+  },
+  {
+    "id": "Track-Station_Sfax_Junction-to-Station_Sousse_North",
+    "type": "MainLine",
+    "connected_to": [
+      "Station_Sfax_Junction",
+      "Station_Sousse_North"
+    ],
+    "payload_constraints": {
+      "length_km": 43,
+      "max_gradient_permille": 5.0,
+      "signaling_system": "Manual_Block",
+      "max_axle_load_tonnes": 22.5
+    }
+  },
+  {
+    "id": "Platform-Gabes_Terminal-1",
+    "type": "Platform",
+    "station_group_id": "Station_Gabes_Terminal",
+    "connected_to": [
+      "Station_Gabes_Terminal"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 300.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Platform-Gabes_Terminal-2",
+    "type": "Platform",
+    "station_group_id": "Station_Gabes_Terminal",
+    "connected_to": [
+      "Station_Gabes_Terminal"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 150.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Platform-Gabes_Terminal-3",
+    "type": "Platform",
+    "station_group_id": "Station_Gabes_Terminal",
+    "connected_to": [
+      "Station_Gabes_Terminal"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 150.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Platform-Gabes_Terminal-4",
+    "type": "Platform",
+    "station_group_id": "Station_Gabes_Terminal",
+    "connected_to": [
+      "Station_Gabes_Terminal"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 300.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Station_Gabes_Terminal",
+    "type": "Station_Hub",
+    "name": "Gare de Gabes_Terminal",
+    "location": {
+      "lat": 35.3,
+      "lon": 10.4
+    },
+    "connected_to": [
+      "Platform-Gabes_Terminal-1",
+      "Platform-Gabes_Terminal-2",
+      "Platform-Gabes_Terminal-3",
+      "Platform-Gabes_Terminal-4"
+    ]
+  },
+  {
+    "id": "Track-Station_Sousse_North-to-Station_Gabes_Terminal",
+    "type": "MainLine",
+    "connected_to": [
+      "Station_Sousse_North",
+      "Station_Gabes_Terminal"
+    ],
+    "payload_constraints": {
+      "length_km": 26,
+      "max_gradient_permille": 12.0,
+      "signaling_system": "Manual_Block",
+      "max_axle_load_tonnes": 22.5
+    }
+  },
+  {
+    "id": "Platform-Bizerte_Port-1",
+    "type": "Platform",
+    "station_group_id": "Station_Bizerte_Port",
+    "connected_to": [
+      "Station_Bizerte_Port"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 150.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Platform-Bizerte_Port-2",
+    "type": "Platform",
+    "station_group_id": "Station_Bizerte_Port",
+    "connected_to": [
+      "Station_Bizerte_Port"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 400.0,
+      "cleared_gauge": "GC",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Platform-Bizerte_Port-3",
+    "type": "Platform",
+    "station_group_id": "Station_Bizerte_Port",
+    "connected_to": [
+      "Station_Bizerte_Port"
+    ],
+    "payload_constraints": {
+      "usable_length_meters": 300.0,
+      "cleared_gauge": "G1",
+      "signaling_system": "ETCS_L1",
+      "is_electrified": true
+    }
+  },
+  {
+    "id": "Station_Bizerte_Port",
+    "type": "Station_Hub",
+    "name": "Gare de Bizerte_Port",
+    "location": {
+      "lat": 34.8,
+      "lon": 10.5
+    },
+    "connected_to": [
+      "Platform-Bizerte_Port-1",
+      "Platform-Bizerte_Port-2",
+      "Platform-Bizerte_Port-3"
+    ]
+  },
+  {
+    "id": "Track-Station_Gabes_Terminal-to-Station_Bizerte_Port",
+    "type": "MainLine",
+    "connected_to": [
+      "Station_Gabes_Terminal",
+      "Station_Bizerte_Port"
+    ],
+    "payload_constraints": {
+      "length_km": 28,
+      "max_gradient_permille": 0.0,
+      "signaling_system": "ETCS_L1",
+      "max_axle_load_tonnes": 22.5
+    }
+  }
+]
