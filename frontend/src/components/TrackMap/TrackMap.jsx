@@ -1,32 +1,30 @@
-import { motion } from "framer-motion"
-import { tracks } from "../../data/tracksData"
-import Train from "./Train"
-import Station from "./Station"
-import React, { useState, useEffect } from "react"
-import { useLocation } from "react-router-dom"
+import { motion } from "framer-motion";
+import { tracks } from "../../data/tracksData";
+import Train from "./Train";
+import Station from "./Station";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 function TrackMap({ data = [], type = "train", mode = "default" }) {
-  const [selectedItem, setSelectedItem] = useState(null)
-  const location = useLocation()
+  const [selectedItem, setSelectedItem] = useState(null);
+  const location = useLocation();
 
   // Reset selection when returning to the main list
   useEffect(() => {
-    const pathParts = location.pathname.split("/")
-    
-    // If we're at the main list page, clear selection
+    const pathParts = location.pathname.split("/");
+
     if (
       (type === "train" && pathParts[1] === "schedules" && pathParts.length === 2) ||
       (type === "train" && pathParts[1] === "trains" && pathParts.length === 2) ||
       (type === "station" && pathParts[1] === "stations" && pathParts.length === 2)
     ) {
-      setSelectedItem(null)
+      setSelectedItem(null);
     }
-  }, [location.pathname, type])
+  }, [location.pathname, type]);
 
   return (
     <div className="w-full h-full">
       <svg viewBox="0 0 1000 1000" className="w-full h-full">
-
         {/* Tracks */}
         {tracks.map((track, index) => (
           <motion.path
@@ -36,6 +34,7 @@ function TrackMap({ data = [], type = "train", mode = "default" }) {
             fill="none"
             stroke={track.color}
             strokeWidth={track.width}
+            strokeDasharray={track.dashArray || "0"}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: index * 0.2 }}
@@ -44,6 +43,7 @@ function TrackMap({ data = [], type = "train", mode = "default" }) {
 
         {/* Trains */}
         {type === "train" &&
+          Array.isArray(data) &&
           data.map((train) => (
             <Train
               key={train.id}
@@ -58,6 +58,7 @@ function TrackMap({ data = [], type = "train", mode = "default" }) {
 
         {/* Stations */}
         {type === "station" &&
+          Array.isArray(data) &&
           data.map((station) => (
             <Station
               key={station.id}
@@ -71,7 +72,7 @@ function TrackMap({ data = [], type = "train", mode = "default" }) {
           ))}
       </svg>
     </div>
-  )
+  );
 }
 
-export default TrackMap
+export default TrackMap;

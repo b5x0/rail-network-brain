@@ -1,75 +1,58 @@
 export const tracks = [
   {
     id: "red-line",
-    color: "#e64c3c", // Bright Red
+    color: "#ff4444",
     width: 8,
     path: `
-      M 350 110 
-      L 350 350
-      C 350 370, 370 380, 390 380
-      L 650 380
-      L 650 650
+      M 354 89
+      L 348 443
+      L 372 471
+      L 662 471
+      L 684 491
+      L 686 781
     `,
   },
   {
     id: "orange-line",
-    color: "#f39c12", // Orange
+    color: "#ffaa00",
     width: 8,
     path: `
-      M 75 490 
-      L 620 490
-      C 640 490, 650 500, 650 520
-      L 650 760
+      M 38 491
+      L 640 493
+      L 660 509
+      L 660 777
     `,
   },
   {
     id: "dark-blue-line",
-    color: "#2c3e50", // Dark Navy
+    color: "#4444ff",
     width: 8,
     path: `
-      M 450 210 
-      L 380 280
-      L 380 440
-      C 380 460, 390 470, 410 470
-      L 670 470
-      L 670 650
-      L 750 650
-      L 800 600
-      L 900 600
+      M 444 203
+      L 376 265
+      L 376 427
+      L 396 447
+      L 680 449
+      L 710 471
+      L 710 779
     `,
   },
   {
-    id: "teal-line-solid",
-    color: "#16a085", // Solid Teal (Right side)
+    id: "teal-line",
+    color: "#00ffff",
     width: 8,
     path: `
-      M 700 100 
-      L 700 550
-      L 700 900
+      M 734 963
+      L 730 783
     `,
   },
   {
-    id: "dashed-teal-line",
-    color: "#16a085", // Teal Dashed
+    id: "green-line",
+    color: "#44ff44",
     width: 8,
-    dashArray: "15, 10",
     path: `
-      M 250 180 
-      L 250 500
-      L 450 750
-      L 600 750
+      M 730 63
+      L 732 555
     `,
   },
-  {
-    id: "light-blue-dashed",
-    color: "#3498db", // Light Blue Dashed (Bottom)
-    width: 8,
-    dashArray: "15, 10",
-    path: `
-      M 110 750 
-      L 350 750
-      L 450 650
-      L 580 650
-    `,
-  }
 ];

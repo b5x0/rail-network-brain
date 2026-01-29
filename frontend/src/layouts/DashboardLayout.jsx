@@ -32,13 +32,13 @@ function DashboardLayout({ mapContent, detectorContent , autoStart = false }) {
 
         <div className="absolute inset-0 flex box-border px-[5%] py-[7%] gap-[2%]">
           {/* ===== RADAR ===== */}
-          <div className="relative w-[55%] h-full self-center flex items-center justify-center bg-[#0b0b0b] rounded-[10%] shadow-[inset_0_0_20px_rgba(255,255,255,0.08),0_15px_35px_rgba(0,0,0,0.7)]">
+          <div className=" relative w-[55%] h-full self-center flex items-center justify-center bg-[#0b0b0b] rounded-[10%] shadow-[inset_0_0_20px_rgba(255,255,255,0.08),0_15px_35px_rgba(0,0,0,0.7)]">
             <Nail position="top-left" />
             <Nail position="top-right" />
             <Nail position="bottom-left" />
             <Nail position="bottom-right" />
 
-            <div className="w-[85%] h-[90%] flex justify-center items-center rounded-full bg-gray-300 relative overflow-hidden shadow-[0_0_20px_rgba(255,255,255,0.4),inset_0_0_60px_rgba(0,0,0,0.25)]">
+            <div className="w-[90%] h-[95%] flex justify-center items-center rounded-full bg-gray-300 relative overflow-hidden shadow-[0_0_20px_rgba(255,255,255,0.4),inset_0_0_60px_rgba(0,0,0,0.25)]">
               <AnimatePresence>
                 {running && (
                   typeof mapContent === "string" ? (

@@ -1,19 +1,12 @@
 import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import Button from "../ui/Button";
 
-const TrainSchedulePanel = () => {
-  const { trainId } = useParams();
+const TrainSchedulePanel = ({ trainData }) => {
+  if (!trainData) return <div>Loading train schedule...</div>;
 
-  const scheduleData = {
-    route_id: "Route-North-South",
-    train_id: trainId,
-    stops: [
-      { station_id: "Tunis_Central", platform_id: "Platform-Tunis-01", arrival_time: "08:00", departure_time: "08:15" },
-      { station_id: "Sousse_Central", platform_id: "Platform-Sousse-03", arrival_time: "09:30", departure_time: "09:40" },
-    ],
-  };
+  const stops = trainData.schedule || [];
 
   return (
     <motion.div
@@ -25,9 +18,11 @@ const TrainSchedulePanel = () => {
       <h2 className="text-4xl text-center mb-4">Schedules</h2>
 
       <div className="font-mono bg-gradient-to-b from-[#e9d9b0] to-[#d4b46c] border-4 border-[#f1c40f] rounded-3xl p-4 text-sm">
-        <div>train_id : {scheduleData.train_id}</div>
+        <div>train_id : {trainData.id}</div>
 
-        {scheduleData.stops.map((stop, i) => (
+        {stops.length === 0 && <div className="pl-6 mt-2">No schedule available</div>}
+
+        {stops.map((stop, i) => (
           <div key={i} className="pl-6 mt-3">
             <div>{stop.station_id}</div>
             <div>{stop.arrival_time} → {stop.departure_time}</div>
@@ -36,11 +31,11 @@ const TrainSchedulePanel = () => {
       </div>
 
       <div className="flex gap-4 mt-6">
-        <Link to="/">
+        <Link to="/trains">
           <Button ButtonContent="Back" />
         </Link>
 
-        <Link to={`/trains/${trainId}`}>
+        <Link to={`/trains/${trainData.id}`}>
           <Button ButtonContent="Train_Info" />
         </Link>
       </div>

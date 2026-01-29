@@ -1,74 +1,99 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
 
+/**
+ * Station component: same approach as Train for position safety.
+ */
 function Station({
   id,
   name,
   trackId,
-  progress = 0.5,
+  progress = 0,
   selectedStation,
   setSelectedStation,
 }) {
-  const stationRef = useRef(null);
-  const textRef = useRef(null);
-  const navigate = useNavigate();
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: null, y: null });
+  const rafRef = useRef(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    const path = document.getElementById(trackId);
-    if (!path || !stationRef.current || !textRef.current) return;
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
-    const length = path.getTotalLength();
-    const point = path.getPointAtLength(length * progress);
+  useEffect(() => {
+    let cancelled = false;
 
-    stationRef.current.setAttribute("cx", point.x);
-    stationRef.current.setAttribute("cy", point.y);
+    const compute = () => {
+      const path = document.getElementById(trackId);
+      if (!path) {
+        rafRef.current = requestAnimationFrame(compute);
+        return;
+      }
 
-    // Offset text above circle
-    setPosition({ x: point.x, y: point.y - 15 });
+      try {
+        const length = path.getTotalLength();
+        const p = Math.max(0, Math.min(1, Number(progress) || 0));
+        const point = path.getPointAtLength(length * p);
+
+        if (!cancelled && mountedRef.current) {
+          setPosition({ x: point.x, y: point.y });
+        }
+      } catch (err) {
+        rafRef.current = requestAnimationFrame(compute);
+      }
+    };
+
+    compute();
+
+    return () => {
+      cancelled = true;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [trackId, progress]);
 
   const handleClick = () => {
     if (!selectedStation) {
       setSelectedStation(id);
-      navigate(`/stations/${id}`);
+      // navigate handled by parent (TrackMap wraps router)
+      // or you can push here if you want: navigate(`/stations/${id}`)
     }
   };
 
-  // Same selection logic as Train
-  const isOther = selectedStation && selectedStation !== id;
-  const fillColor = "blue";
-  const opacity = isOther ? 0.5 : 1;
-  const cursor = isOther ? "default" : "pointer";
+  if (position.x === null || position.y === null) return null;
 
   return (
-    <>
-      {/* Station circle */}
-      <circle
-        ref={stationRef}
-        r="12"
-        fill={fillColor}
-        stroke="white"
+    <g
+      onClick={handleClick}
+      style={{
+        pointerEvents: selectedStation && selectedStation !== id ? "none" : "auto",
+        opacity: selectedStation && selectedStation !== id ? 0.5 : 1,
+        cursor: selectedStation && selectedStation !== id ? "default" : "pointer",
+      }}
+    >
+      <rect
+        x={position.x - 8}
+        y={position.y - 8}
+        width={16}
+        height={16}
+        rx={3}
+        fill="#111"
+        stroke="#fff"
         strokeWidth="2"
-        className="transition-transform duration-200"
-        style={{ transformOrigin: "center", opacity, cursor }}
-        onClick={handleClick}
       />
-
-      {/* Station name */}
       <text
-        ref={textRef}
         x={position.x}
-        y={position.y}
-        fontSize="30"           // smaller font
+        y={position.y - 18}
+        textAnchor="middle"
+        fontSize="12"
         fill="black"
-        textAnchor="middle"     // center horizontally
         pointerEvents="none"
-        className=""
       >
         {name}
       </text>
-    </>
+    </g>
   );
 }
 
