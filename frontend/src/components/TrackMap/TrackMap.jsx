@@ -1,20 +1,21 @@
 import { motion } from "framer-motion"
 import { tracks } from "../../data/tracksData"
-
-
 import Train from "./Train"
 import Station from "./Station"
 import React, { useState, useEffect } from "react"
 import { useLocation } from "react-router-dom"
 
-function TrackMap({ data = [], type = "train" }) {
+function TrackMap({ data = [], type = "train", mode = "default" }) {
   const [selectedItem, setSelectedItem] = useState(null)
   const location = useLocation()
 
-  // Reset selection when returning to list
+  // Reset selection when returning to the main list
   useEffect(() => {
     const pathParts = location.pathname.split("/")
+    
+    // If we're at the main list page, clear selection
     if (
+      (type === "train" && pathParts[1] === "schedules" && pathParts.length === 2) ||
       (type === "train" && pathParts[1] === "trains" && pathParts.length === 2) ||
       (type === "station" && pathParts[1] === "stations" && pathParts.length === 2)
     ) {
@@ -24,7 +25,7 @@ function TrackMap({ data = [], type = "train" }) {
 
   return (
     <div className="w-full h-full">
-      <svg viewBox="0 0 1000 1000" className="w-full h-full rounded-full">
+      <svg viewBox="0 0 1000 1000" className="w-full h-full">
 
         {/* Tracks */}
         {tracks.map((track, index) => (
@@ -35,26 +36,31 @@ function TrackMap({ data = [], type = "train" }) {
             fill="none"
             stroke={track.color}
             strokeWidth={track.width}
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: index * 0.3 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: index * 0.2 }}
           />
         ))}
 
-        {/* Entities */}
+        {/* Trains */}
         {type === "train" &&
           data.map((train) => (
             <Train
               key={train.id}
-              {...train}
+              id={train.id}
+              trackId={train.trackId}
+              progress={train.progress}
               selectedTrain={selectedItem}
               setSelectedTrain={setSelectedItem}
+              mode={mode}
             />
           ))}
 
+        {/* Stations */}
         {type === "station" &&
-          data.map((station , index) => (
+          data.map((station) => (
             <Station
+              key={station.id}
               id={station.id}
               name={station.name}
               trackId={station.trackId}

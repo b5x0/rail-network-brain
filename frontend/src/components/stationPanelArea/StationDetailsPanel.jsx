@@ -30,7 +30,7 @@ const StationDetailsPanel = () => {
       </h1>
 
       {/* Info Card */}
-      <div className="rounded-2xl border-4 border-blue-500 bg-gradient-to-b from-blue-100 to-blue-400 p-4 text-sm">
+      <div className="font-mono rounded-2xl border-4 border-blue-500 bg-gradient-to-b from-blue-100 to-blue-400 p-4 text-sm">
         <div>
           <b>id :</b> {stationData.id}
         </div>

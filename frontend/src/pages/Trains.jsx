@@ -10,7 +10,7 @@ import { trainsData } from "../data/TrainsData";
 const Trains = () => {
   return (
     <DashboardLayout
-      mapContent={<TrackMap trains={trainsData} />}
+      mapContent={<TrackMap data={trainsData} type="train" />}
       detectorContent={
         <Routes>
           {/* Default list */}

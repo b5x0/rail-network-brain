@@ -26,7 +26,7 @@ const StationPlatformPanel = () => {
     >
       <h2 className="text-4xl text-center mb-4">Platforms</h2>
 
-      <div className="bg-gradient-to-b from-[#e9d9b0] to-[#d4b46c] border-4 border-[#f1c40f] rounded-3xl p-4 text-sm">
+      <div className="font-mono bg-gradient-to-b from-[#e9d9b0] to-[#d4b46c] border-4 border-[#f1c40f] rounded-3xl p-4 text-sm">
         <div>platform_id : {platformData.id}</div>
         <div>station_group_id : {platformData.station_group_id}</div>
 
@@ -39,7 +39,7 @@ const StationPlatformPanel = () => {
       </div>
 
       <div className="flex gap-4 mt-6">
-        <Link to="/stations" >
+        <Link to="/" >
           <Button ButtonContent="Back" />
         </Link>
 

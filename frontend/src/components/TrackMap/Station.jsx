@@ -37,7 +37,7 @@ function Station({
 
   // Same selection logic as Train
   const isOther = selectedStation && selectedStation !== id;
-  const fillColor = "rgb(13,160,13)";
+  const fillColor = "blue";
   const opacity = isOther ? 0.5 : 1;
   const cursor = isOther ? "default" : "pointer";
 

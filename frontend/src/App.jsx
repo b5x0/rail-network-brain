@@ -5,7 +5,7 @@ import {Routes , Route} from "react-router-dom"
 import MainPage from './pages/MainPage'
 import Trains from './pages/Trains'
 import Stations from './pages/Stations'
-
+import Schedules from "./pages/Schedules"
 
 function App() {
 
@@ -25,6 +25,11 @@ function App() {
 
         <Route path='/stations/*' element={
           <Stations />
+        }/>
+
+
+        <Route path='/schedules/*' element={
+          <Schedules />
         }/>
 
 

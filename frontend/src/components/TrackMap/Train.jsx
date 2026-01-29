@@ -1,7 +1,14 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-function Train({ id, trackId, progress = 0.5, selectedTrain, setSelectedTrain }) {
+function Train({
+  id,
+  trackId,
+  progress = 0.5,
+  selectedTrain,
+  setSelectedTrain,
+  mode = "default",
+}) {
   const trainRef = useRef(null)
   const textRef = useRef(null)
   const navigate = useNavigate()
@@ -16,37 +23,38 @@ function Train({ id, trackId, progress = 0.5, selectedTrain, setSelectedTrain })
 
     trainRef.current.setAttribute("cx", point.x)
     trainRef.current.setAttribute("cy", point.y)
-    setPosition({ x: point.x, y: point.y - 20 }) // offset text above the circle
+    setPosition({ x: point.x, y: point.y - 20 })
   }, [trackId, progress])
 
   const handleClick = () => {
     if (!selectedTrain) {
       setSelectedTrain(id)
-      navigate(`/trains/${id}`)
+
+      if (mode === "schedule") {
+        navigate(`/schedules/${id}/schedule`)
+      } else {
+        navigate(`/trains/${id}`)
+      }
     }
   }
 
-  // Determine styles based on selection
   const isOther = selectedTrain && selectedTrain !== id
-  const fillColor = "rgb(13,160,13)"
-  const opacity = isOther ? 0.5 : 1
-  const cursor = isOther ? "default" : "pointer"
 
   return (
     <>
-      {/* Circle */}
       <circle
         ref={trainRef}
         r="15"
-        fill={fillColor}
+        fill="rgb(13,160,13)"
         stroke="white"
         strokeWidth="2"
-        className="transition-transform duration-200"
-        style={{ transformOrigin: "center", opacity, cursor }}
+        style={{
+          opacity: isOther ? 0.4 : 1,
+          cursor: isOther ? "default" : "pointer",
+        }}
         onClick={handleClick}
       />
 
-      {/* Train ID above the circle */}
       <text
         ref={textRef}
         x={position.x}
@@ -54,7 +62,7 @@ function Train({ id, trackId, progress = 0.5, selectedTrain, setSelectedTrain })
         textAnchor="middle"
         fontSize="40"
         fill="black"
-        pointerEvents="none" // make text not interfere with clicking
+        pointerEvents="none"
       >
         {id}
       </text>

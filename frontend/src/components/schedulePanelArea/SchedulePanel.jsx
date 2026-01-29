@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import Button from "../ui/Button";
 
-const TrainSchedulePanel = () => {
+const SchedulePanel = () => {
   const { trainId } = useParams();
 
   const scheduleData = {
@@ -21,6 +21,7 @@ const TrainSchedulePanel = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={{ duration: 0.5 }}
+      className="w-full"
     >
       <h2 className="text-4xl text-center mb-4">Schedules</h2>
 
@@ -40,12 +41,12 @@ const TrainSchedulePanel = () => {
           <Button ButtonContent="Back" />
         </Link>
 
-        <Link to={`/trains/${trainId}`}>
-          <Button ButtonContent="Train_Info" />
+        <Link to="/schedules">
+          <Button ButtonContent="Trains" />
         </Link>
       </div>
     </motion.div>
   );
 };
 
-export default TrainSchedulePanel;
+export default SchedulePanel;

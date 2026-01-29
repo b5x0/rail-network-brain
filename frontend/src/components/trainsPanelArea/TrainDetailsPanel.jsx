@@ -31,7 +31,7 @@ const TrainDetailsPanel = () => {
     >
       <h1 className="text-4xl text-center tracking-widest">TRAIN_INFO</h1>
 
-      <div className="rounded-2xl border-4 border-lime-400 bg-gradient-to-b from-lime-100 to-lime-400 p-4 text-sm">
+      <div className="font-mono rounded-2xl border-4 border-lime-400 bg-gradient-to-b from-lime-100 to-lime-400 p-4 text-sm">
         <div><b>id :</b> {trainData.id}</div>
         <div><b>type :</b> {trainData.type}</div>
         <div><b>priority :</b> {trainData.priority}</div>
