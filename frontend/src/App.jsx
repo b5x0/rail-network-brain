@@ -4,6 +4,9 @@ import {Routes , Route} from "react-router-dom"
 // pages importation
 import MainPage from './pages/MainPage'
 import Trains from './pages/Trains'
+import Stations from './pages/Stations'
+
+
 function App() {
 
 
@@ -17,6 +20,11 @@ function App() {
 
         <Route path='/trains/*' element={
           <Trains />
+        }/>
+
+
+        <Route path='/stations/*' element={
+          <Stations />
         }/>
 
 

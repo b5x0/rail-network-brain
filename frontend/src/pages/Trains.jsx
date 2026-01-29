@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import TrackMap from "../components/TrackMap/TrackMap";
-import TrainListPanel from "../components/trainsPanelArea/TrainsListPanel";
+import TrainListPanel from "../components/trainsPanelArea/TrainListPanel";
 import TrainDetailsPanel from "../components/trainsPanelArea/TrainDetailsPanel";
 import TrainSchedulePanel from "../components/trainsPanelArea/TrainSchedulePanel";
 import { trainsData } from "../data/TrainsData";
