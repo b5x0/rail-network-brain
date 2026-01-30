@@ -125,7 +125,7 @@ function DashboardLayout({ mapContent, detectorContent , autoStart = false }) {
           </div>
 
           {/* ===== DETECTOR ===== */}
-          <div className="flex items-center flex-col py-4 w-[35%] h-full self-center relative overflow-hidden bg-gray-300 rounded-[40px] border-[4px] border-[#444] shadow-[inset_0_0_30px_rgba(255,255,255,0.8),0_0_15px_rgba(255,255,255,0.3)] font-vt323">
+          <div className="flex items-center flex-col py-4 w-[35%] h-full self-center relative overflow-hidden bg-gray-400 rounded-[40px] border-[4px] border-[#444] shadow-[inset_0_0_30px_rgba(255,255,255,0.8),0_0_15px_rgba(255,255,255,0.3)] font-vt323">
             <AnimatePresence>
               {running && (
                 <motion.div

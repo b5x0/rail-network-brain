@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 /**
  * Train component
- * - Computes position from SVG path (by id)
- * - Waits for path to exist before computing to avoid undefined cx/cy
- * - Recomputes on progress prop changes
+ * - Reads SVG path by trackId
+ * - Computes (x,y) from progress [0..1]
+ * - Renders train + ID label ABOVE it
  */
 function Train({
   id,
@@ -29,39 +29,37 @@ function Train({
     };
   }, []);
 
-  // Helper: safe number progress in [0,1]
-  const safeProgress = (p) => {
+  const clampProgress = (p) => {
     const n = Number(p);
-    if (Number.isFinite(n)) return Math.max(0, Math.min(1, n));
-    return 0;
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.min(1, n));
   };
 
-  // Compute position; if path doesn't exist yet, poll via rAF until found.
   useEffect(() => {
     let cancelled = false;
 
     const compute = () => {
       const path = document.getElementById(trackId);
       if (!path) {
-        // retry next frame
         rafRef.current = requestAnimationFrame(compute);
         return;
       }
 
       try {
         const length = path.getTotalLength();
-        const p = safeProgress(progress);
-        const point = path.getPointAtLength(length * p);
+        const safeP = clampProgress(progress);
+        const point = path.getPointAtLength(length * safeP);
 
         if (!cancelled && mountedRef.current) {
           setPosition({ x: point.x, y: point.y });
-          // Debug log so you can see progress updates
-          // (will be visible in browser console)
-          // eslint-disable-next-line no-console
-          console.debug(`[Train:${id}] progress=${p} -> x=${Math.round(point.x)}, y=${Math.round(point.y)}`);
+
+          console.debug(
+            `[Train ${id}] progress=${safeP.toFixed(3)} → (${Math.round(
+              point.x
+            )}, ${Math.round(point.y)})`
+          );
         }
-      } catch (err) {
-        // Some SVG path shapes may throw until rendered -- retry
+      } catch {
         rafRef.current = requestAnimationFrame(compute);
       }
     };
@@ -75,50 +73,54 @@ function Train({
   }, [trackId, progress, id]);
 
   const handleClick = () => {
-    if (!selectedTrain) {
-      setSelectedTrain(id);
-      if (mode === "schedule") navigate(`/schedules/${id}/schedule`);
-      else navigate(`/trains/${id}`);
-    }
+    if (selectedTrain && selectedTrain !== id) return;
+    setSelectedTrain(id);
+    navigate(mode === "schedule" ? `/schedules/${id}/schedule` : `/trains/${id}`);
   };
 
-  const isOther = selectedTrain && selectedTrain !== id;
+  const isOtherSelected = selectedTrain && selectedTrain !== id;
 
-  // If position not computed yet, don't render the train (avoids cx="undefined")
   if (position.x === null || position.y === null) return null;
 
   return (
     <g
       onClick={handleClick}
       style={{
-        pointerEvents: isOther ? "none" : "auto",
-        opacity: isOther ? 0.4 : 1,
-        cursor: isOther ? "default" : "pointer",
+        cursor: isOtherSelected ? "default" : "pointer",
+        opacity: isOtherSelected ? 0.35 : 1,
+        pointerEvents: isOtherSelected ? "none" : "auto",
       }}
     >
+      {/* 🚆 Train */}
       <motion.circle
         cx={position.x}
         cy={position.y}
-        r={mode === "default" ? 12 : 9}
+        r={mode === "default" ? 14 : 10}
         fill="rgb(13,160,13)"
         stroke="white"
-        strokeWidth="2"
+        strokeWidth={2}
         animate={{ cx: position.x, cy: position.y }}
-        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        transition={{ type: "spring", stiffness: 260, damping: 22 }}
       />
 
-      <motion.text
-        x={position.x}
-        y={position.y - 18}
-        textAnchor="middle"
-        fontSize="16"
-        fill="black"
+      {/* 🏷 Train ID ABOVE */}
+      <motion.g
+        animate={{ x: position.x, y: position.y - 26 }}
+        transition={{ type: "spring", stiffness: 260, damping: 22 }}
         pointerEvents="none"
-        animate={{ x: position.x, y: position.y - 18 }}
-        transition={{ type: "spring", stiffness: 300, damping: 25 }}
       >
-        {id}
-      </motion.text>
+        
+        <text
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize={32}
+          fontWeight=""
+          fill="black"
+          className="font-mono"
+        >
+          {id}
+        </text>
+      </motion.g>
     </g>
   );
 }
