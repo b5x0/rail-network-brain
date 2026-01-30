@@ -7,182 +7,144 @@ import TrainDetailsPanel from "../components/trainsPanelArea/TrainDetailsPanel";
 import TrainSchedulePanel from "../components/trainsPanelArea/TrainSchedulePanel";
 import CollisionAlert from "../components/CollisionAlert";
 import { getSimulationState, startSimulation } from "../services/api";
-import { tracks } from "../data/tracksData";
+
+// 📍 COORDINATES
+const STATION_COORDINATES = {
+  "Red_Start": {x: 354, y: 87}, "S-1": {x: 350, y: 179}, "S-2": {x: 348, y: 339},
+  "Red_WP1": {x: 372, y: 471}, "Red_WP2": {x: 662, y: 471},
+  "Ariana_Central": {x: 684, y: 559}, "Sfax_Central": {x: 686, y: 781},
+  "Sousse_Central": {x: 38, y: 491}, "S-3": {x: 244, y: 489}, "Orange_WP1": {x: 640, y: 493},
+  "Tunis_Central": {x: 442, y: 201}, "S-4": {x: 486, y: 443},
+  "Blue_WP1": {x: 376, y: 265}, "Blue_WP2": {x: 376, y: 427}, "Blue_WP3": {x: 680, y: 449},
+  "Green_Start": {x: 732, y: 69}, "S-5": {x: 732, y: 179}, "S-6": {x: 734, y: 315}, "S-7": {x: 732, y: 427},
+  "Cyan_Start": {x: 734, y: 959}
+};
 
 const Trains = () => {
   const [trains, setTrains] = useState([]);
   const [activeAlert, setActiveAlert] = useState(null);
+  const [conflictMarker, setConflictMarker] = useState(null); 
 
-  // Keep last progress to detect movement
   const lastProgressRef = useRef({});
 
-  // Map train IDs to track IDs based on backend routes
+  // TRACK LINES
   const trainToTrackMapping = {
-    "T-101": "red-line",     // Red Express
-    "T-408": "dark-blue-line", // Blue Commuter  
-    "T-305": "green-line",   // Green Regional
-    "T-204": "orange-line",  // Yellow Freight
-    "T-505": "teal-line"     // Cyan Metro
+    "T-101": "red-line", "T-408": "dark-blue-line",
+    "T-305": "green-line", "T-204": "orange-line", "T-505": "teal-line"
   };
 
-  // Map stations to track progress positions
-  const stationProgressMapping = {
-    // Red line stations
-    "Red_Start": { track: "red-line", progress: 0.0 },
-    "S-1": { track: "red-line", progress: 0.15 },
-    "S-2": { track: "red-line", progress: 0.32 },
-    "Red_WP1": { track: "red-line", progress: 0.45 },
-    "Red_WP2": { track: "red-line", progress: 0.65 },
-    "Ariana_Central": { track: "red-line", progress: 0.78 },
-    "Sfax_Central": { track: "red-line", progress: 1.0 },
-    
-    // Orange line stations
-    "Sousse_Central": { track: "orange-line", progress: 0.0 },
-    "S-3": { track: "orange-line", progress: 0.25 },
-    "Orange_WP1": { track: "orange-line", progress: 0.5 },
-    
-    // Blue line stations
-    "Tunis_Central": { track: "dark-blue-line", progress: 0.0 },
-    "Blue_WP1": { track: "dark-blue-line", progress: 0.25 },
-    "Blue_WP2": { track: "dark-blue-line", progress: 0.45 },
-    "S-4": { track: "dark-blue-line", progress: 0.6 },
-    "Blue_WP3": { track: "dark-blue-line", progress: 0.76 },
-    
-    // Green line stations
-    "Green_Start": { track: "green-line", progress: 0.0 },
-    "S-5": { track: "green-line", progress: 0.25 },
-    "S-6": { track: "green-line", progress: 0.55 },
-    "S-7": { track: "green-line", progress: 1.0 },
-    
-    // Cyan line stations
-    "Cyan_Start": { track: "teal-line", progress: 0.0 }
+  const getStationPosition = (stationName, lineId) => {
+    // Red Line
+    if (lineId === "red-line") {
+      const map = { "Red_Start": 0.0, "S-1": 0.15, "S-2": 0.32, "Red_WP1": 0.45, "Red_WP2": 0.65, "Ariana_Central": 0.78, "Sfax_Central": 1.0 };
+      if (map[stationName] !== undefined) return { track: "red-line", progress: map[stationName] };
+    }
+    // Teal Line
+    if (lineId === "teal-line") {
+      const map = { "Cyan_Start": 0.0, "Sfax_Central": 1.0 };
+      if (map[stationName] !== undefined) return { track: "teal-line", progress: map[stationName] };
+    }
+    // Green Line
+    if (lineId === "green-line") {
+      const map = { "Green_Start": 0.0, "S-5": 0.25, "S-6": 0.55, "S-7": 0.85, "Ariana_Central": 1.0 };
+      if (map[stationName] !== undefined) return { track: "green-line", progress: map[stationName] };
+    }
+    // Orange Line
+    if (lineId === "orange-line") {
+      const map = { "Sousse_Central": 0.0, "S-3": 0.25, "Orange_WP1": 0.5, "Ariana_Central": 0.8, "Sfax_Central": 1.0 };
+      if (map[stationName] !== undefined) return { track: "orange-line", progress: map[stationName] };
+    }
+    // Blue Line
+    if (lineId === "dark-blue-line") {
+      const map = { "Tunis_Central": 0.0, "Blue_WP1": 0.25, "Blue_WP2": 0.45, "S-4": 0.6, "Blue_WP3": 0.76, "Ariana_Central": 1.0 };
+      if (map[stationName] !== undefined) return { track: "dark-blue-line", progress: map[stationName] };
+    }
+    return null; 
   };
 
   useEffect(() => {
     let interval;
-
     const initSimulation = async () => {
       try {
-        console.log("🚀 Starting simulation...");
         await startSimulation();
-
         interval = setInterval(async () => {
           try {
             const state = await getSimulationState();
+            if (!state?.trains) return;
 
-            if (!state?.trains) {
-              console.warn("⚠️ No trains in simulation state");
-              return;
+            // --- DEBUG: ALERT LOGIC ---
+            const rawAlert = state.alerts?.find(a => !a.resolved);
+            
+            if (rawAlert) {
+              setActiveAlert(rawAlert);
+              
+              const coords = STATION_COORDINATES[rawAlert.location];
+              if (coords) {
+                  setConflictMarker(coords);
+              } else {
+                  // 🚨 LOGGING THE ERROR
+                  console.error("🔥 CRITICAL: Alert at unknown location:", rawAlert.location);
+                  console.log("Available Locations:", Object.keys(STATION_COORDINATES));
+                  setConflictMarker(null);
+              }
+            } else {
+              setActiveAlert(null);
+              setConflictMarker(null);
             }
 
-            // Check for active alerts
-            const alert = state.alerts?.find(a => !a.resolved);
-            setActiveAlert(alert);
-
-            console.log("🔁 Polling simulation state...");
-            console.log("Full state:", state);
-            console.log("Active alerts:", state.alerts?.filter(a => !a.resolved));
-
+            // --- DEBUG: TRAIN LOGIC ---
             const trainsArray = Object.values(state.trains).map(train => {
-              const prev = lastProgressRef.current[train.id];
-              const curr = train.progress ?? 0;
-
-              // 🔍 Progress debug
-              if (prev === undefined) {
-                console.log(
-                  `🚆 [${train.id}] initial progress →`,
-                  curr
-                );
-              } else if (prev !== curr) {
-                console.log(
-                  `📈 [${train.id}] progress changed:`,
-                  prev,
-                  "→",
-                  curr
-                );
-              } else {
-                console.log(
-                  `🧊 [${train.id}] progress frozen at`,
-                  curr
-                );
-              }
-
-              // Save current progress
-              lastProgressRef.current[train.id] = curr;
-
-              // Calculate track position based on current location and progress
-              const currentStation = stationProgressMapping[train.location];
-              const nextStation = stationProgressMapping[train.next_location];
+              const trackId = trainToTrackMapping[train.id] || "red-line";
+              const currentStation = getStationPosition(train.location, trackId);
+              const nextStation = getStationPosition(train.next_location, trackId);
               
-              let trackId = trainToTrackMapping[train.id] || "red-line";
               let trackProgress = 0;
               
               if (currentStation && nextStation && currentStation.track === nextStation.track) {
-                // Interpolate between current and next station
                 const segmentProgress = train.progress || 0;
                 trackProgress = currentStation.progress + 
                   (nextStation.progress - currentStation.progress) * segmentProgress;
               } else if (currentStation) {
-                // Use current station position
                 trackProgress = currentStation.progress;
-                trackId = currentStation.track;
+              } else {
+                 // 🚨 LOGGING IF TRAIN IS LOST
+                 console.warn(`⚠️ Train ${train.id} lost at ${train.location} on ${trackId}`);
               }
               
-              return {
-                id: train.id,
-                type: train.type,
-                trackId: trackId,
-                progress: Math.max(0, Math.min(1, trackProgress)),
-                location: train.location,
-                next_location: train.next_location,
-                status: train.status,
-                current_speed: train.current_speed,
-                max_speed: train.max_speed,
-                dwell_timer: train.dwell_timer,
-                mass_tonnes: train.mass_tonnes,
-                length_m: train.length_m,
-                gauge: train.gauge,
-                schedule: train.schedule || [],
-              };
+              lastProgressRef.current[train.id] = trackProgress;
+              return { ...train, trackId: trackId, progress: Math.max(0, Math.min(1, trackProgress)) };
             });
 
             setTrains(trainsArray);
-          } catch (err) {
-            console.error("❌ Error fetching simulation state:", err);
-          }
+          } catch (err) { console.error(err); }
         }, 500);
-      } catch (err) {
-        console.error("❌ Error starting simulation:", err);
-      }
+      } catch (err) { console.error(err); }
     };
-
     initSimulation();
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-        console.log("🛑 Simulation polling stopped");
-      }
-    };
+    return () => clearInterval(interval);
   }, []);
+
+  const handleAlertResolve = () => {
+    console.log("🖱️ User resolved Alert");
+    setActiveAlert(null);
+    setConflictMarker(null);
+  };
 
   return (
     <DashboardLayout
-      mapContent={<TrackMap data={trains} type="train" />}
+      mapContent={<TrackMap data={trains} type="train" conflictMarker={conflictMarker} />}
       detectorContent={
-        <div className="w-full h-full flex flex-col">
-          {activeAlert && <CollisionAlert alert={activeAlert} />}
-          <div className="flex-1">
+        <div className="w-full h-full relative">
+          {activeAlert && (
+            <div style={{ position: 'fixed', top: '80px', right: '20px', zIndex: 9999, width: '380px', maxWidth: '90vw' }}>
+              <CollisionAlert alert={activeAlert} onResolve={handleAlertResolve} />
+            </div>
+          )}
+          <div className="h-full">
             <Routes>
               <Route index element={<TrainListPanel />} />
-              <Route
-                path=":trainId"
-                element={<TrainDetailsWrapper trains={trains} />}
-              />
-              <Route
-                path=":trainId/schedule"
-                element={<TrainScheduleWrapper trains={trains} />}
-              />
+              <Route path=":trainId" element={<TrainDetailsWrapper trains={trains} />} />
+              <Route path=":trainId/schedule" element={<TrainScheduleWrapper trains={trains} />} />
             </Routes>
           </div>
         </div>
@@ -192,14 +154,11 @@ const Trains = () => {
   );
 };
 
-// ---- Wrappers ----
-
 const TrainDetailsWrapper = ({ trains }) => {
   const { trainId } = useParams();
   const trainData = trains.find(t => t.id === trainId);
   return <TrainDetailsPanel trainData={trainData} />;
 };
-
 const TrainScheduleWrapper = ({ trains }) => {
   const { trainId } = useParams();
   const trainData = trains.find(t => t.id === trainId);
