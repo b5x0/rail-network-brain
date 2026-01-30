@@ -6,24 +6,25 @@ import TrainListPanel from "../components/trainsPanelArea/TrainListPanel";
 import TrainDetailsPanel from "../components/trainsPanelArea/TrainDetailsPanel";
 import TrainSchedulePanel from "../components/trainsPanelArea/TrainSchedulePanel";
 import CollisionAlert from "../components/CollisionAlert";
+import StatsPanel from "../components/StatsPanel";
 import { getSimulationState, startSimulation } from "../services/api";
 
 // 📍 COORDINATES
 const STATION_COORDINATES = {
-  "Red_Start": {x: 354, y: 87}, "S-1": {x: 350, y: 179}, "S-2": {x: 348, y: 339},
-  "Red_WP1": {x: 372, y: 471}, "Red_WP2": {x: 662, y: 471},
-  "Ariana_Central": {x: 684, y: 559}, "Sfax_Central": {x: 686, y: 781},
-  "Sousse_Central": {x: 38, y: 491}, "S-3": {x: 244, y: 489}, "Orange_WP1": {x: 640, y: 493},
-  "Tunis_Central": {x: 442, y: 201}, "S-4": {x: 486, y: 443},
-  "Blue_WP1": {x: 376, y: 265}, "Blue_WP2": {x: 376, y: 427}, "Blue_WP3": {x: 680, y: 449},
-  "Green_Start": {x: 732, y: 69}, "S-5": {x: 732, y: 179}, "S-6": {x: 734, y: 315}, "S-7": {x: 732, y: 427},
-  "Cyan_Start": {x: 734, y: 959}
+  "Red_Start": { x: 354, y: 87 }, "S-1": { x: 350, y: 179 }, "S-2": { x: 348, y: 339 },
+  "Red_WP1": { x: 372, y: 471 }, "Red_WP2": { x: 662, y: 471 },
+  "Ariana_Central": { x: 684, y: 559 }, "Sfax_Central": { x: 686, y: 781 },
+  "Sousse_Central": { x: 38, y: 491 }, "S-3": { x: 244, y: 489 }, "Orange_WP1": { x: 640, y: 493 },
+  "Tunis_Central": { x: 442, y: 201 }, "S-4": { x: 486, y: 443 },
+  "Blue_WP1": { x: 376, y: 265 }, "Blue_WP2": { x: 376, y: 427 }, "Blue_WP3": { x: 680, y: 449 },
+  "Green_Start": { x: 732, y: 69 }, "S-5": { x: 732, y: 179 }, "S-6": { x: 734, y: 315 }, "S-7": { x: 732, y: 427 },
+  "Cyan_Start": { x: 734, y: 959 }
 };
 
 const Trains = () => {
   const [trains, setTrains] = useState([]);
   const [activeAlert, setActiveAlert] = useState(null);
-  const [conflictMarker, setConflictMarker] = useState(null); 
+  const [conflictMarker, setConflictMarker] = useState(null);
 
   const lastProgressRef = useRef({});
 
@@ -59,7 +60,7 @@ const Trains = () => {
       const map = { "Tunis_Central": 0.0, "Blue_WP1": 0.25, "Blue_WP2": 0.45, "S-4": 0.6, "Blue_WP3": 0.76, "Ariana_Central": 1.0 };
       if (map[stationName] !== undefined) return { track: "dark-blue-line", progress: map[stationName] };
     }
-    return null; 
+    return null;
   };
 
   useEffect(() => {
@@ -74,18 +75,18 @@ const Trains = () => {
 
             // --- DEBUG: ALERT LOGIC ---
             const rawAlert = state.alerts?.find(a => !a.resolved);
-            
+
             if (rawAlert) {
               setActiveAlert(rawAlert);
-              
+
               const coords = STATION_COORDINATES[rawAlert.location];
               if (coords) {
-                  setConflictMarker(coords);
+                setConflictMarker(coords);
               } else {
-                  // 🚨 LOGGING THE ERROR
-                  console.error("🔥 CRITICAL: Alert at unknown location:", rawAlert.location);
-                  console.log("Available Locations:", Object.keys(STATION_COORDINATES));
-                  setConflictMarker(null);
+                // 🚨 LOGGING THE ERROR
+                console.error("🔥 CRITICAL: Alert at unknown location:", rawAlert.location);
+                console.log("Available Locations:", Object.keys(STATION_COORDINATES));
+                setConflictMarker(null);
               }
             } else {
               setActiveAlert(null);
@@ -97,20 +98,20 @@ const Trains = () => {
               const trackId = trainToTrackMapping[train.id] || "red-line";
               const currentStation = getStationPosition(train.location, trackId);
               const nextStation = getStationPosition(train.next_location, trackId);
-              
+
               let trackProgress = 0;
-              
+
               if (currentStation && nextStation && currentStation.track === nextStation.track) {
                 const segmentProgress = train.progress || 0;
-                trackProgress = currentStation.progress + 
+                trackProgress = currentStation.progress +
                   (nextStation.progress - currentStation.progress) * segmentProgress;
               } else if (currentStation) {
                 trackProgress = currentStation.progress;
               } else {
-                 // 🚨 LOGGING IF TRAIN IS LOST
-                 console.warn(`⚠️ Train ${train.id} lost at ${train.location} on ${trackId}`);
+                // 🚨 LOGGING IF TRAIN IS LOST
+                console.warn(`⚠️ Train ${train.id} lost at ${train.location} on ${trackId}`);
               }
-              
+
               lastProgressRef.current[train.id] = trackProgress;
               return { ...train, trackId: trackId, progress: Math.max(0, Math.min(1, trackProgress)) };
             });
@@ -132,7 +133,12 @@ const Trains = () => {
 
   return (
     <DashboardLayout
-      mapContent={<TrackMap data={trains} type="train" conflictMarker={conflictMarker} />}
+      mapContent={
+        <>
+          <TrackMap data={trains} type="train" conflictMarker={conflictMarker} />
+          <StatsPanel />
+        </>
+      }
       detectorContent={
         <div className="w-full h-full relative">
           {activeAlert && (

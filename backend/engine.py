@@ -10,10 +10,63 @@ class SimulationEngine:
         self.running = False
         self.paused = False 
         self.lock = threading.Lock()
-        self.state = { "time": 0, "trains": {}, "alerts": [] }
+        self.state = { "time": 0, "trains": {}, "alerts": [], "veto_count": 0 }
+        # Environment Oracle: Stores the absolute truth of the simulation world
         self.routes = {} 
         self.immunity_log = {} 
         self.load_world()
+        
+    def generate_schedule(self, train_id):
+        """Generates a dynamic schedule based on the train's route and current state."""
+        train = self.state["trains"][train_id]
+        route = self.routes[train_id]
+        current_idx = train["route_index"]
+        
+        schedule = []
+        # Estimate time: 1 tick = 1 minute for UI purposes
+        # Start from current time
+        arrival_offset = 0
+        
+        # Determine remaining route (circular buffer logic simplified here)
+        # We just show the next few stops
+        stops_to_show = route[current_idx:] + route[:current_idx]
+        stops_to_show = stops_to_show[:5] # Show next 5 stops
+        
+        for stop in stops_to_show:
+            # Simple heuristic: Distance / Speed
+            # Distances are abstract (1.0 units). Speed is ~0.1-0.5 units/tick.
+            # Time to traverse 1 segment ~ 1.0 / speed.
+            speed = max(train["max_speed"], 0.1) # Avoid div by zero
+            ticks_needed = 1.0 / speed * 10 # Scale factor
+            
+            arrival_offset += ticks_needed
+            arrival_time_ticks = self.state["time"] + arrival_offset
+            
+            # Format as HH:MM
+            sim_start_hour = 8
+            minutes_total = int(arrival_time_ticks)
+            hours = (sim_start_hour + minutes_total // 60) % 24
+            mins = minutes_total % 60
+            time_str = f"{hours:02d}:{mins:02d}"
+            
+            # Departure is arrival + dwell (approx 2 mins)
+            dep_minutes = minutes_total + 2
+            dep_hours = (sim_start_hour + dep_minutes // 60) % 24
+            dep_mins = dep_minutes % 60
+            dep_str = f"{dep_hours:02d}:{dep_mins:02d}"
+            
+            status = "On Time"
+            if train["current_speed"] < train["max_speed"] * 0.5:
+                status = "Delayed"
+
+            schedule.append({
+                "station_id": stop,
+                "arrival_time": time_str,
+                "departure_time": dep_str,
+                "status": status # Keep status for potential future use or other components
+            })
+            
+        train["schedule"] = schedule
 
     def load_world(self):
         # Define all train routes as sequences of station and waypoint names
@@ -34,7 +87,8 @@ class SimulationEngine:
             "status": "Boarding", "current_speed": 0.0, "max_speed": 0.50, 
             "dwell_timer": 2, "start_tick": 0, "route_index": 0,
             # Physical characteristics that affect braking distance and speed capabilities
-            "mass_tonnes": 480, "length_m": 200, "gauge": "Standard (1435mm)" 
+            "mass_tonnes": 480, "length_m": 200, "gauge": "Standard (1435mm)",
+            "max_speed_kmh": 300
         }
         
         # T-408 (Blue Commuter): Medium weight, Standard Gauge - Rapid commuter service
@@ -44,7 +98,8 @@ class SimulationEngine:
             "status": "Scheduled", "current_speed": 0.0, "max_speed": 0.35, 
             "dwell_timer": 0, "start_tick": 5, "route_index": 0,
             # Physical characteristics that affect braking distance and speed capabilities
-            "mass_tonnes": 320, "length_m": 150, "gauge": "Standard (1435mm)"
+            "mass_tonnes": 320, "length_m": 150, "gauge": "Standard (1435mm)",
+            "max_speed_kmh": 160
         }
 
         # T-305 (Green Regional): Diesel-powered, Standard Gauge - Regional/commuter service
@@ -54,7 +109,8 @@ class SimulationEngine:
             "status": "Scheduled", "current_speed": 0.0, "max_speed": 0.30, 
             "dwell_timer": 0, "start_tick": 12, "route_index": 0,
             # Physical characteristics that affect braking distance and speed capabilities
-            "mass_tonnes": 110, "length_m": 80, "gauge": "Standard (1435mm)"
+            "mass_tonnes": 110, "length_m": 80, "gauge": "Standard (1435mm)",
+            "max_speed_kmh": 140
         }
         
         # T-204 (Yellow Freight): Heavy cargo train with significantly longer stopping distance
@@ -64,7 +120,8 @@ class SimulationEngine:
             "status": "Scheduled", "current_speed": 0.0, "max_speed": 0.20, 
             "dwell_timer": 0, "start_tick": 20, "route_index": 0,
             # Physical characteristics that affect braking distance and speed capabilities
-            "mass_tonnes": 2400, "length_m": 600, "gauge": "Standard (1435mm)"
+            "mass_tonnes": 2400, "length_m": 600, "gauge": "Standard (1435mm)",
+            "max_speed_kmh": 100
         }
 
         # T-505 (Cyan Metro): Light metro train on narrow metric gauge track
@@ -74,8 +131,13 @@ class SimulationEngine:
             "status": "Scheduled", "current_speed": 0.0, "max_speed": 0.40, 
             "dwell_timer": 0, "start_tick": 2, "route_index": 0,
             # Physical characteristics that affect braking distance and speed capabilities
-            "mass_tonnes": 60, "length_m": 40, "gauge": "Metric (1000mm)"
+            "mass_tonnes": 60, "length_m": 40, "gauge": "Metric (1000mm)",
+            "max_speed_kmh": 80
         }
+        
+        # Initialize schedules
+        for t_id in self.state["trains"]:
+            self.generate_schedule(t_id)
 
     def start(self):
         if not self.running: self.running = True; threading.Thread(target=self.loop, daemon=True).start()
@@ -136,6 +198,10 @@ class SimulationEngine:
                     train["location"] = route[0]
                     train["next_location"] = route[1]
                     train["dwell_timer"] = 10 
+            
+            # Update schedule every 10 ticks to reflect delays/progress
+            if self.state["time"] % 10 == 0:
+                self.generate_schedule(t_id) 
 
     def detect_conflicts(self):
         """Scan all trains to find potential collisions at stations.
@@ -178,10 +244,40 @@ class SimulationEngine:
 
     def has_active_alerts(self): return any(not a["resolved"] for a in self.state["alerts"])
 
+    def calculate_stopping_distance(self, train):
+        """Calculates the stopping distance based on physics."""
+        # Map abstract speed (0.0-0.5) to km/h
+        # If train['max_speed'] (abstract) corresponds to train['max_speed_kmh']
+        if train["max_speed"] <= 0: return 0
+        
+        ratio = train["current_speed"] / train["max_speed"]
+        speed_kmh = ratio * train.get("max_speed_kmh", 100) # Default to 100 if missing
+        
+        # Formula: (0.5 * mass * (speed_m_s)^2) / Force
+        # Force = 15 kN (simulated braking force)
+        speed_ms = speed_kmh / 3.6
+        energy = 0.5 * train["mass_tonnes"] * (speed_ms ** 2)
+        # Using 15 as divisor as per requirement (assuming 15 represents the braking constant in this formula context)
+        # Realistically Force would be much higher for a train (e.g. hundreds of kN), but we follow the prompt's formula.
+        distance = energy / 15 
+        return distance
+
     def apply_resolution(self, train_id, action):
         """Apply the user's chosen resolution action to prevent the collision.
         Modifies train behavior and adds immunity period to prevent repeated alerts."""
         train = self.state["trains"][train_id]
+        
+        # Deterministic Safety Agent (The Watcher)
+        if action == "Hold":
+            stopping_dist = self.calculate_stopping_distance(train)
+            safety_buffer = 300 # meters
+            
+            if stopping_dist > safety_buffer:
+                # VETO: Train is too fast/heavy to stop safely
+                print(f"[THE WATCHER] 🛡️ PHYSICS VETO: Train {train_id} cannot stop (Req: {stopping_dist:.2f}m). Overriding to Reroute.")
+                self.state["veto_count"] += 1
+                action = "Reroute" # Override action
+
         if action == "Hold":
             # Stop train at signal for 10 seconds to clear the conflicted station
             train["dwell_timer"] = 10

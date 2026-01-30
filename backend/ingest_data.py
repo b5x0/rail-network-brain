@@ -1,63 +1,81 @@
 import json
-import numpy as np
-from qdrant_client import QdrantClient, models
-from qdrant_client.models import PointStruct, VectorParams, Distance
+import os
+import sys
 
-# Qdrant vector database configuration
+try:
+    from sentence_transformers import SentenceTransformer
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import PointStruct, VectorParams, Distance
+except ImportError as e:
+    print(f"❌ Missing dependencies: {e}")
+    print("Please run: pip install sentence-transformers qdrant-client")
+    sys.exit(1)
+
+# Configuration
 QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
-COLLECTION_NAME = "golden_runs"  # Vector collection storing historical rail network patterns
+COLLECTION_NAME = "golden_runs"
+MODEL_NAME = "all-MiniLM-L6-v2"
+VECTOR_SIZE = 384 # 384 dimensions for all-MiniLM-L6-v2
 
-client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+def main():
+    print(f"🚀 Initializing Ingestion for {COLLECTION_NAME}...")
 
-# Step 1: Generate deterministic vector embeddings for each station
-# This creates a mapping of station IDs (e.g., "Ariana_Central") to numerical vectors (128-dim).
-# These vectors are later used by the API to perform semantic searches on rail network data.
-print("🧮 Training Vectors...")
+    # 1. Initialize Qdrant Client
+    try:
+        client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+        # Check connection implicitly by performing an operation
+        client.get_collections()
+        print(f"✅ Connected to Qdrant at {QDRANT_HOST}:{QDRANT_PORT}")
+    except Exception as e:
+        print(f"❌ Failed to connect to Qdrant: {e}")
+        print("Ensure Qdrant is running (docker run -p 6333:6333 qdrant/qdrant)")
+        sys.exit(1)
 
-with open("data_generator/infrastructure.json", "r") as f:
-    infra = json.load(f)
+    # 2. Load Data
+    data_path = "backend/training_data.json"
+    if not os.path.exists(data_path):
+        print(f"❌ Data file not found at {data_path}")
+        sys.exit(1)
 
-vector_dict = {}
-for i, node in enumerate(infra["nodes"]):
-    # Generate a deterministic 128-dimensional vector for each station using a fixed seed.
-    # This ensures consistent embeddings across sessions. In production, these would be trained via GNN.
-    rng = np.random.default_rng(seed=i) 
-    vector = rng.random(128).tolist()
-    vector_dict[node["id"]] = vector
+    with open(data_path, "r") as f:
+        data = json.load(f)
+    print(f"📂 Loaded {len(data)} records from {data_path}")
 
-# Persist the station-to-vector mapping for use by the API (main.py).
-# This allows the API to convert station IDs into vectors without regenerating them.
-with open("backend/rail_vector_dict.json", "w") as f:
-    json.dump(vector_dict, f)
-print("✅ Saved 'rail_vector_dict.json' (The Brain's Index)")
+    # 3. Initialize Model
+    print(f"🧠 Loading SentenceTransformer model: {MODEL_NAME}...")
+    model = SentenceTransformer(MODEL_NAME)
 
-# Step 2: Load historical rail network logs into the Qdrant vector database
-# This recreates the collection to ensure a clean slate for storing vector-indexed historical data.
-print("🚀 Ingesting to Qdrant...")
-client.recreate_collection(
-    collection_name=COLLECTION_NAME,
-    vectors_config=VectorParams(size=128, distance=Distance.COSINE)  # 128-dim vectors with cosine similarity
-)
+    # 4. Recreate Collection
+    print(f"🗑️  Recreating collection '{COLLECTION_NAME}' with size {VECTOR_SIZE}...")
+    client.recreate_collection(
+        collection_name=COLLECTION_NAME,
+        vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE)
+    )
 
-with open("data_generator/training_data.json", "r") as f:
-    logs = json.load(f)
+    # 5. Vectorize and Prepare Points
+    print("⚡ Vectorizing and preparing batches...")
+    points = []
+    
+    # Batch processing for encoding is faster
+    descriptions = [item["description"] for item in data]
+    embeddings = model.encode(descriptions, show_progress_bar=True)
 
-points = []
-for i, log in enumerate(logs):
-    loc = log["location_id"]
-    if loc in vector_dict:
-        # Create a point with the station's vector embedding and the full log as metadata (payload).
+    for i, (item, vector) in enumerate(zip(data, embeddings)):
         points.append(PointStruct(
             id=i,
-            vector=vector_dict[loc],
-            payload=log
+            vector=vector.tolist(),
+            payload=item
         ))
 
-# Upload points to Qdrant in batches to optimize database performance and prevent timeouts.
-BATCH_SIZE = 100
-for i in range(0, len(points), BATCH_SIZE):
-    batch = points[i : i + BATCH_SIZE]
-    client.upsert(collection_name=COLLECTION_NAME, points=batch)
+    # 6. Upload to Qdrant
+    print(f"⬆️  Uploading {len(points)} points to Qdrant...")
+    client.upload_points(
+        collection_name=COLLECTION_NAME,
+        points=points,
+    )
 
-print(f"✅ Successfully ingested {len(points)} memories into Qdrant.")
+    print("✅ Ingestion Complete! Data is now searchable.")
+
+if __name__ == "__main__":
+    main()
