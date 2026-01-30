@@ -1,8 +1,8 @@
-# 🚄 RailBrain: Cognitive Rail Network Operations Center
+# 🚄 Massar: Cognitive Rail Network Operations Center
 
 > **🚀 Neuro-Symbolic AI & Physics-Deterministic Validation Engine**
 
-RailBrain is an advanced, **Dual-Agent** rail traffic management system designed to detect, analyze, and resolve network conflicts in real-time. It moves beyond simple collision avoidance by integrating **Neural Search** for creative problem solving with a **Deterministic Physics Engine** for absolute safety enforcement.
+Massar is an advanced, **Dual-Agent** rail traffic management system designed to detect, analyze, and resolve network conflicts in real-time. It moves beyond simple collision avoidance by integrating **Neural Search** for creative problem solving with a **Deterministic Physics Engine** for absolute safety enforcement.
 
 ---
 
@@ -16,7 +16,7 @@ RailBrain is an advanced, **Dual-Agent** rail traffic management system designed
 
 ## 🧠 System Architecture: The "Triad" Design
 
-RailBrain operates on a **Neuro-Symbolic Architecture**, separating creative decision-making from physical safety constraints.
+Massar operates on a **Neuro-Symbolic Architecture**, separating creative decision-making from physical safety constraints.
 
 ### 1. The Environment: Causal Physics Engine (`backend/engine.py`)
 A custom-built, tick-based simulation engine that models **Thermodynamics and Kinematics**, not just movement.

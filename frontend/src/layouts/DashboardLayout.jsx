@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import Nail from "../components/ui/Nail";
+import { stopSimulation } from "../services/api";
 
-function DashboardLayout({ mapContent, detectorContent , autoStart = false }) {
+function DashboardLayout({ mapContent, detectorContent, autoStart = false }) {
   const [running, setRunning] = useState(false);
+  const navigate = useNavigate();
 
   // ===== Auto-start simulation when page mounts =====
   useEffect(() => {
@@ -11,7 +14,15 @@ function DashboardLayout({ mapContent, detectorContent , autoStart = false }) {
   }, [autoStart]);
 
   const onStart = () => setRunning(true);
-  const onStop = () => setRunning(false);
+  const onStop = async () => {
+    setRunning(false);
+    try {
+      await stopSimulation();
+      navigate("/");
+    } catch (e) {
+      console.error("Failed to stop simulation", e);
+    }
+  };
 
   const redirectToRepo = () => {
     window.open(

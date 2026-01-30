@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Routes, Route, useParams } from "react-router-dom";
+import { Routes, Route, useParams, Link } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import TrackMap from "../components/TrackMap/TrackMap";
 import TrainListPanel from "../components/trainsPanelArea/TrainListPanel";
@@ -140,7 +140,10 @@ const Trains = () => {
         </>
       }
       detectorContent={
-        <div className="w-full h-full relative">
+        <div className="w-full h-full relative flex flex-col">
+          <Link to="/" className="mb-2 text-xs text-gray-500 hover:text-black transition-colors flex items-center gap-1 font-mono">
+            <span>←</span> BACK TO LIVE VIEW
+          </Link>
           {activeAlert && (
             <div style={{ position: 'fixed', top: '80px', right: '20px', zIndex: 9999, width: '380px', maxWidth: '90vw' }}>
               <CollisionAlert alert={activeAlert} onResolve={handleAlertResolve} />

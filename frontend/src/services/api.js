@@ -37,4 +37,10 @@ export const startSimulation = async () => {
   return response.data;
 };
 
+// Stop the simulation engine
+export const stopSimulation = async () => {
+  const response = await api.post('/simulation/stop');
+  return response.data;
+};
+
 export default api;

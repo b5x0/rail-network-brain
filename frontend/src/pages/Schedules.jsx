@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Link } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import TrackMap from "../components/TrackMap/TrackMap";
 
@@ -13,14 +13,19 @@ const Trains = () => {
     <DashboardLayout
       mapContent={<TrackMap data={trainsData} type="train" mode="schedule" />}
       detectorContent={
-        <Routes>
-          {/* Default list */}
-          <Route index element={<ScheduleListPanel />} />
-          {/* Train schedule */}
-          <Route path=":trainId/schedule" element={<SchedulePanel />} />
-        </Routes>
+        <div className="w-full h-full flex flex-col">
+          <Link to="/" className="mb-2 text-xs text-gray-800 hover:text-black transition-colors flex items-center gap-1 font-mono">
+            <span>←</span> BACK TO LIVE VIEW
+          </Link>
+          <Routes>
+            {/* Default list */}
+            <Route index element={<ScheduleListPanel />} />
+            {/* Train schedule */}
+            <Route path=":trainId/schedule" element={<SchedulePanel />} />
+          </Routes>
+        </div>
       }
-      autoStart = {true}
+      autoStart={true}
     />
   );
 };

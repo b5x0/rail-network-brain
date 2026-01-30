@@ -142,6 +142,9 @@ class SimulationEngine:
     def start(self):
         if not self.running: self.running = True; threading.Thread(target=self.loop, daemon=True).start()
 
+    def stop(self):
+        self.running = False
+
     def loop(self):
         """Main simulation loop that runs continuously while simulation is active.
         Executes collision detection and physics updates each tick, respecting pause state."""
