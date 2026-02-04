@@ -73,7 +73,6 @@ const Trains = () => {
             const state = await getSimulationState();
             if (!state?.trains) return;
 
-            // --- DEBUG: ALERT LOGIC ---
             const rawAlert = state.alerts?.find(a => !a.resolved);
 
             if (rawAlert) {
@@ -83,9 +82,7 @@ const Trains = () => {
               if (coords) {
                 setConflictMarker(coords);
               } else {
-                // 🚨 LOGGING THE ERROR
-                console.error("🔥 CRITICAL: Alert at unknown location:", rawAlert.location);
-                console.log("Available Locations:", Object.keys(STATION_COORDINATES));
+                console.warn("Alert at unknown location:", rawAlert.location);
                 setConflictMarker(null);
               }
             } else {
@@ -93,7 +90,6 @@ const Trains = () => {
               setConflictMarker(null);
             }
 
-            // --- DEBUG: TRAIN LOGIC ---
             const trainsArray = Object.values(state.trains).map(train => {
               const trackId = trainToTrackMapping[train.id] || "red-line";
               const currentStation = getStationPosition(train.location, trackId);
@@ -107,9 +103,6 @@ const Trains = () => {
                   (nextStation.progress - currentStation.progress) * segmentProgress;
               } else if (currentStation) {
                 trackProgress = currentStation.progress;
-              } else {
-                // 🚨 LOGGING IF TRAIN IS LOST
-                console.warn(`⚠️ Train ${train.id} lost at ${train.location} on ${trackId}`);
               }
 
               lastProgressRef.current[train.id] = trackProgress;
@@ -126,7 +119,6 @@ const Trains = () => {
   }, []);
 
   const handleAlertResolve = () => {
-    console.log("🖱️ User resolved Alert");
     setActiveAlert(null);
     setConflictMarker(null);
   };

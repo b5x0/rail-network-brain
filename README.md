@@ -1,12 +1,12 @@
-# Massar: Neuro-Symbolic Rail Control System (SIL-4 Ready)
+# Massar: Neuro-Symbolic Retrieval-Augmented Control (RAC) for Rail
 
 > **🚀 Industrial Grade Neuro-Symbolic AI & Physics-Deterministic Validation Engine**
 
-Massar is an advanced, **Dual-Agent** rail traffic management system designed to detect, analyze, and resolve network conflicts in real-time. It moves beyond simple collision avoidance by integrating **Neural Metric Learning** for creative problem solving with a **Deterministic Physics Engine** for absolute safety enforcement.
+Massar is an industrial-grade collision avoidance system designed with **SIL-4 safety principles**. It utilizes **Qdrant** for Kinematic State Retrieval and a deterministic **Physics Veto** engine to ensure absolute operational safety. It moves beyond simple collision avoidance by integrating **Neural Metric Learning** for creative problem solving with rigid physical constraints.
 
 ---
 
-## ⚠️ SYSTEM STATUS: INDUSTRIALIZED 
+## ⚠️ SYSTEM STATUS: INDUSTRIALIZED (PHASE 13) 
 **Current Build:** Production Ready (SIL-4 Compliant Architecture)
 * **Frontend:** Production-Ready **React.js Dashboard** with Glassmorphism UI & Live Physics Stats.
 * **Backend:** Multi-Agent Architecture (AI Brain + Physics Safety Layer).
@@ -32,18 +32,17 @@ The Watcher is a rigid safety agent that acts as the system's "Veto Power."
 
 ### 3. Agent 2: "The Brain" (Neural Search & Learning) (`backend/main.py`)
 When a conflict is detected, The Brain generates strategic resolutions using **Metric Learning**.
-* **Numerical Telemetry Vectors:** Directly encodes Speed, Location, and Weather into 16-dimensional vectors.
-* **Binary Quantization:** Uses 32x compression for Edge Deployment efficiency (running on Qdrant).
-* **Context Awareness:** Automatically filters historical precedents by `train_type` (e.g., "Passenger" vs "Freight") to ensure relevant suggestions.
-* **Continuous Learning:** Implements **One-Shot Learning**. When a human operator manually resolves a conflict, the decision is vectorized and upserted to **Qdrant** instantly.
+* **Kinematic State Encoders:** Maps raw telemetry (Speed, Location) directly to vector space (replacing NLP/Transformers).
+* **Binary Quantization:** Uses 32x compression for Edge/IoT deployment efficiency.
+* **Context Awareness:** Automatically filters historical precedents by `train_type` to ensure relevant suggestions.
 
 ---
 
 ## ⚡ Key Features
 
-### 🛡️ Judge-Proof Safety
-* **Dual-Check Validation:** AI optimizes for efficiency; Physics optimizes for survival.
-* **Veto Logging:** The system logs every time the Physics Agent overrides the AI.
+### 🛡️ Visible Physics Veto
+* **Deterministic Safety Layer:** The "Watcher" agent preemptively checks all AI suggestions against braking distance variables.
+* **Safety Intervention:** If an AI option is unsafe, it is visually blocked in the UI with a clear explanation.
 
 ### 📊 Business Value Dashboard
 A real-time "Glassmorphism" panel tracking KPIs:
@@ -62,7 +61,6 @@ A real-time "Glassmorphism" panel tracking KPIs:
 * **Backend:** Python 3.11+, FastAPI (Async/Await)
 * **Frontend:** React.js, Vite, TailwindCSS
 * **Vector Database:** Qdrant (Binary Quantized HNSW)
-* **Start Method:** `docker-compose up` or Manual Script
 
 ---
 
@@ -96,12 +94,10 @@ npm run dev
 
 ```mermaid
 graph LR
-    A[Raw Telemetry] -->|Speed/Dist/Weather| B(Neural Encoder)
+    A[Telemetry] -->|Speed/Dist| B(Kinematic Encoder)
     B -->|Metric Learning| C{Qdrant VDB}
     C -->|Top 3 Matches| D[AI Proposal]
-    D -->|Candidate Option| E{Physics Veto}
+    D -->|Candidate Option| E{Physics Engine}
     E -->|Safe?| F[Dashboard]
-    E -->|Unsafe!| G[Safety Shield]
-    User -->|Click| H[Resolution]
-    H -->|One-Shot Update| C
+    E -->|Unsafe!| G[Veto Shield]
 ```

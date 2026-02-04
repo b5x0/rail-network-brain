@@ -13,7 +13,8 @@ const StatsPanel = () => {
                     setStats(data);
                 }
             } catch (e) {
-                console.error("Failed to fetch stats", e);
+                // Silently fail or log debug
+                // console.debug("Stats fetch failed");
             }
         };
 

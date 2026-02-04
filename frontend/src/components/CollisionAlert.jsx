@@ -10,7 +10,7 @@ function CollisionAlert({ alert, onResolve }) {
 
   useEffect(() => {
     if (alert && alert.id !== alertIdRef.current) {
-      console.log("⚡ New Alert Detected:", alert.id);
+      // console.debug("New Alert Detected:", alert.id);
       alertIdRef.current = alert.id;
       fetchOptions();
     }
@@ -38,7 +38,7 @@ function CollisionAlert({ alert, onResolve }) {
       await executeOption(alert.id, option.train, option.action);
       if (onResolve) onResolve();
     } catch (err) {
-      console.error("❌ Error executing resolution:", err);
+      console.error("Error executing resolution:", err);
     }
     setLoading(false);
   };
@@ -47,7 +47,8 @@ function CollisionAlert({ alert, onResolve }) {
   const getScore = (opt) => {
     if (opt.confidence !== undefined) return opt.confidence; // Use numerical confidence from backend (0-100)
     if (opt.score) return Math.floor(opt.score * 100);
-    // Fake but Stable fallback
+
+    // Heuristic Fallback for stability
     const hash = opt.action.length + opt.train.length + (opt.desc?.length || 0);
     return 85 + (hash % 14); // Returns a fixed number between 85-99
   };

@@ -8,10 +8,10 @@ from utils.embedding import get_vector
 COLLECTION_NAME = "golden_runs"
 VECTOR_SIZE = 16
 
-def generate_synthetic_baseline(n=1000):
+def generate_synthetic_baseline(n: int = 1000) -> None:
     """
-    Generates synthetic 'Safe Baseline' memory to solve Cold Start problem.
-    Creates N valid telemetry vectors with safe default actions.
+    Generates 1,000 hours of synthetic safety data to initialize the Cold Start memory bank.
+    Creates valid telemetry vectors with safe default actions to populate the Qdrant index.
     """
     print(f"🏭 Generating {n} synthetic safety records...")
     

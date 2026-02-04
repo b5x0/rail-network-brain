@@ -1,8 +1,9 @@
 import hashlib
+from typing import List
 
-def get_vector(speed_kmh: float = 0.0, location: str = "Unknown", weather: str = "Clear", train_id: str = "Unknown") -> list[float]:
+def get_vector(speed_kmh: float = 0.0, location: str = "Unknown", weather: str = "Clear", train_id: str = "Unknown") -> List[float]:
     """
-    Simulates a Contrastive Learning Encoder.
+    Deterministic Kinematic Encoder: Maps physical state to vector space.
     Converts raw telemetry into a deterministic 16-dimensional numerical vector.
     
     This replaces the heavy LLM (SentenceTransformers) for an 'Industrial Grade' pure-math approach.

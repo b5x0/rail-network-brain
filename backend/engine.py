@@ -6,6 +6,14 @@ TICK_RATE = 1.0
 SPEED_MULTIPLIER = 1.5 
 
 class SimulationEngine:
+    """
+    Deterministic Physics Engine for Rail Network Simulation.
+    
+    Handles:
+    - Kinematic updates (velocity, acceleration, friction)
+    - Conflict detection (Spatial overlap, Head-on, Rear-end)
+    - Safety enforcement via 'The Watcher' agent (Physics Veto)
+    """
     def __init__(self):
         self.running = False
         self.paused = False 

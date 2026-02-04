@@ -114,7 +114,7 @@ def get_options(train_type: str = None):
                 final_options.append({
                     "action": fb["action"],
                     "train": victim_id,
-                    "confidence": 50,
+                    "confidence": 50, # Conservative score for Fallbacks (User Request)
                     "desc": fb["desc"],
                     "pros": fb["pros"],
                     "cons": fb["cons"]
