@@ -10,7 +10,7 @@ class SimulationEngine:
         self.running = False
         self.paused = False 
         self.lock = threading.Lock()
-        self.state = { "time": 0, "trains": {}, "alerts": [], "veto_count": 0 }
+        self.state = { "time": 0, "trains": {}, "alerts": [], "veto_count": 0, "total_energy_saved_joules": 0 }
         # Environment Oracle: Stores the absolute truth of the simulation world
         self.routes = {} 
         self.immunity_log = {} 
@@ -174,9 +174,12 @@ class SimulationEngine:
                 else: train["status"] = "Station Stop"
                 continue
 
-            # Train is moving between stations; accelerate and advance position
+            # Train is moving between stations; accelerate/decelerate and advance position
             train["status"] = "En Route"
-            if train["current_speed"] < train["max_speed"]: train["current_speed"] += 0.05
+            if train["current_speed"] < train["max_speed"]: 
+                train["current_speed"] += 0.05
+            elif train["current_speed"] > train["max_speed"]:
+                train["current_speed"] = max(train["max_speed"], train["current_speed"] - 0.05)
             train["progress"] += train["current_speed"]
             
             # Check if train has reached next station
@@ -265,6 +268,32 @@ class SimulationEngine:
         distance = energy / 15 
         return distance
 
+    def calculate_kinetic_energy(self, train):
+        """Calculates current Kinetic Energy in Joules.
+        Formula: 0.5 * mass(kg) * velocity(m/s)^2"""
+        ratio = 0
+        if train["max_speed"] > 0:
+            ratio = train["current_speed"] / train["max_speed"]
+        
+        speed_kmh = ratio * train.get("max_speed_kmh", 100)
+        speed_ms = speed_kmh / 3.6
+        mass_kg = train["mass_tonnes"] * 1000
+        
+        return 0.5 * mass_kg * (speed_ms ** 2)
+
+    def is_action_safe(self, train_id, action):
+        """Checks if an action is physically safe for the given train.
+        Returns (is_safe: bool, reason: str)"""
+        train = self.state["trains"][train_id]
+        
+        if action == "Hold":
+            stopping_dist = self.calculate_stopping_distance(train)
+            safety_buffer = 300 # meters
+            if stopping_dist > safety_buffer:
+                return False, f"Braking Dist {stopping_dist:.0f}m > 300m"
+        
+        return True, "Safe"
+
     def apply_resolution(self, train_id, action):
         """Apply the user's chosen resolution action to prevent the collision.
         Modifies train behavior and adds immunity period to prevent repeated alerts."""
@@ -272,14 +301,21 @@ class SimulationEngine:
         
         # Deterministic Safety Agent (The Watcher)
         if action == "Hold":
-            stopping_dist = self.calculate_stopping_distance(train)
-            safety_buffer = 300 # meters
-            
-            if stopping_dist > safety_buffer:
+            is_safe, reason = self.is_action_safe(train_id, action)
+            if not is_safe:
                 # VETO: Train is too fast/heavy to stop safely
-                print(f"[THE WATCHER] 🛡️ PHYSICS VETO: Train {train_id} cannot stop (Req: {stopping_dist:.2f}m). Overriding to Reroute.")
+                print(f"[THE WATCHER] 🛡️ PHYSICS VETO: Train {train_id} cannot stop. {reason}. Overriding to Reroute.")
                 self.state["veto_count"] += 1
                 action = "Reroute" # Override action
+
+        # Energy Calculation (Real Physics)
+        # We assume avoiding a collision saves the energy of the moving train (simplified)
+        # OR we calculate energy dissipated by braking.
+        energy_saved = 0
+        if action in ["Hold", "Slow Down"]:
+            energy_saved = self.calculate_kinetic_energy(train)
+            self.state["total_energy_saved_joules"] += energy_saved
+            # print(f"⚡ Energy Saved: {energy_saved/1_000_000:.2f} MJ")
 
         if action == "Hold":
             # Stop train at signal for 10 seconds to clear the conflicted station

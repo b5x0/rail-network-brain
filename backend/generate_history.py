@@ -1,120 +1,90 @@
-import json
 import random
+import uuid
+from qdrant_client import QdrantClient, models
+from qdrant_client.models import PointStruct, VectorParams, Distance
+from utils.embedding import get_vector
 
-# Step 1: Define the Train Fleet (Hardcoded Physics Attributes)
-TRAINS = {
-    "T-101": {"type": "Passenger_HighSpeed", "mass": 480, "max_speed_kmh": 300},
-    "T-204": {"type": "Freight_Heavy", "mass": 2400, "max_speed_kmh": 100},
-    "T-305": {"type": "Regional_Standard", "mass": 110, "max_speed_kmh": 120}, # Assuming sensible max speed for standard
-    "T-408": {"type": "Commuter_Rapid", "mass": 320, "max_speed_kmh": 140}, # Assuming sensible max for commuter
-    "T-505": {"type": "Metro_Light", "mass": 60, "max_speed_kmh": 80},    # Assuming sensible max for metro
-}
+# Configuration
+COLLECTION_NAME = "golden_runs"
+VECTOR_SIZE = 16
 
-# Step 2: Define Valid Locations
-LOCATIONS = {
-    "Red Line": ["S-1", "S-2", "Red_WP1", "Red_WP2", "Ariana_Central", "Sfax_Central"],
-    "Blue Line": ["Tunis_Central", "Blue_WP1", "Blue_WP2", "S-4", "Blue_WP3"],
-    "Green Line": ["S-5", "S-6", "S-7"],
-    "Orange Line": ["Sousse_Central", "S-3", "Orange_WP1"]
-}
-# Flatten locations for easier selection
-ALL_LOCATIONS = [loc for line in LOCATIONS.values() for loc in line]
-
-WEATHER_CONDITIONS = ["Sunny", "Rain", "Snow", "Hot"]
-TIMES_OF_DAY = ["Peak", "Off-Peak"]
-
-# Step 3: Implement Causal Incident Logic
-def simulate_scenario(train_type, mass, current_speed, weather, time_of_day):
+def generate_synthetic_baseline(n=1000):
     """
-    Returns incident details if triggers are met, otherwise None.
+    Generates synthetic 'Safe Baseline' memory to solve Cold Start problem.
+    Creates N valid telemetry vectors with safe default actions.
     """
+    print(f"🏭 Generating {n} synthetic safety records...")
     
-    # 1. The "Momentum" Rule (Freight)
-    if train_type == "Freight_Heavy" and current_speed > 90 and weather == "Hot":
-        return {
-            "incident_type": "Brake System Overheat",
-            "severity": "High",
-            "action_taken": "Slow Down"
-        }
+    client = QdrantClient(host="localhost", port=6333)
     
-    # 2. The "Traction" Rule (Metro/Light)
-    if train_type == "Metro_Light" and weather == "Rain" and current_speed > 60:
-        return {
-            "incident_type": "Wheel Slip Detected",
-            "severity": "Medium",
-            "action_taken": "Hold"
-        }
-    
-    # 3. The "Passenger" Rule (Commuter)
-    if train_type == "Commuter_Rapid" and time_of_day == "Peak":
-        return {
-            "incident_type": "Door Obstruction",
-            "severity": "Low",
-            "action_taken": "Hold"
-        }
-    
-    # 4. The "Physics" Rule (Stopping Distance)
-    # stopping_dist = (mass * (speed/3.6)**2) / (2 * 10000)
-    speed_ms = current_speed / 3.6
-    stopping_dist = (mass * (speed_ms ** 2)) / (2 * 10000)
-    
-    if stopping_dist > 500:
-        return {
-            "incident_type": "Safe Braking Distance Exceeded",
-            "severity": "Critical",
-            "action_taken": "Reroute"
-        }
-        
-    return None
+    # Ensure collection exists (idempotent check)
+    if not client.collection_exists(COLLECTION_NAME):
+        print("⚠️ Collection not found. Creating new...")
+        client.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+            quantization_config=models.BinaryQuantization(
+                binary=models.BinaryQuantizationConfig(always_ram=True)
+            )
+        )
 
-def generate_entry():
-    # Pick a random train
-    train_id = random.choice(list(TRAINS.keys()))
-    train_info = TRAINS[train_id]
+    points = []
     
-    # Vary parameters reasonably
-    # Speed: 0 to 300 (clamped by train's max capability + a bit of overspeed for interest)
-    # We allow some overspeed to trigger stopping distance rules
-    speed = random.randint(20, 300) 
+    train_types = ["Passenger_HighSpeed", "Freight_Heavy", "Metro_Light", "Regional_Standard"]
+    locations = ["Red_Start", "S-1", "S_2", "Blue_WP1", "Tunis_Central", "Sousse_Central"]
+    weathers = ["Clear", "Rain", "Fog", "Windy"]
     
-    weather = random.choice(WEATHER_CONDITIONS)
-    time_of_day = random.choice(TIMES_OF_DAY)
-    location = random.choice(ALL_LOCATIONS)
-    
-    incident = simulate_scenario(train_info["type"], train_info["mass"], speed, weather, time_of_day)
-    
-    if incident:
-        description = f"{train_info['type']} train ({train_info['mass']}t) experienced {incident['incident_type']} " \
-                      f"while traveling at {speed}km/h in {weather} weather at {location}."
+    for i in range(n):
+        # Procedural Generation of Telemetry
+        speed = random.randint(0, 300)
+        loc = random.choice(locations)
+        weather = random.choice(weathers)
+        t_type = random.choice(train_types)
+        t_id = f"SYN-{random.randint(100, 999)}"
         
-        return {
-            "train_id": train_id,
-            "location": location,
-            "speed_kmh": speed,
-            "weather": weather,
-            "incident_type": incident["incident_type"],
-            "action_taken": incident["action_taken"],
-            "description": description,
-            "severity": incident["severity"]
-        }
-    return None
-
-def main():
-    dataset = []
-    target_count = 1000
-    
-    print(f"Generating {target_count} incident entries...")
-    
-    while len(dataset) < target_count:
-        entry = generate_entry()
-        if entry:
-            dataset.append(entry)
+        # Rule-based "Safe Labeling" logic
+        if speed > 100:
+            action = "Slow Down"
+            desc_action = "reduced speed due to high velocity"
+        elif "Central" in loc:
+            action = "Hold"
+            desc_action = "held at central station"
+        else:
+            action = "Hold" # Default safe action
+            desc_action = "executed safety stop"
             
-    output_path = "backend/training_data.json"
-    with open(output_path, "w") as f:
-        json.dump(dataset, f, indent=2)
+        description = f"Synthetic: {t_type} {desc_action} at {loc} in {weather} weather."
         
-    print(f"Successfully generated {len(dataset)} entries to {output_path}")
+        # Vectorize
+        vector = get_vector(
+            speed_kmh=float(speed),
+            location=loc,
+            weather=weather,
+            train_id=t_id
+        )
+        
+        points.append(PointStruct(
+            id=str(uuid.uuid4()),
+            vector=vector,
+            payload={
+                "train_id": t_id,
+                "train_type": t_type,
+                "action_taken": action,
+                "location": loc,
+                "speed_kmh": speed,
+                "weather": weather,
+                "description": description,
+                "incident_type": "Synthetic Safety Baseline",
+                "source": "synthetic_generator"
+            }
+        ))
+        
+    print(f"⬆️  Upserting {len(points)} synthetic memories to Qdrant...")
+    client.upsert(
+        collection_name=COLLECTION_NAME,
+        points=points
+    )
+    print("✅ Synthetic Baseline Generation Complete.")
 
 if __name__ == "__main__":
-    main()
+    generate_synthetic_baseline()

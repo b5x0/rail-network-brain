@@ -4,21 +4,29 @@ import { getOptions, executeOption } from "../services/api";
 
 function CollisionAlert({ alert, onResolve }) {
   const [options, setOptions] = useState([]);
+  const [rejectedOptions, setRejectedOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const alertIdRef = useRef(null);
 
   useEffect(() => {
     if (alert && alert.id !== alertIdRef.current) {
       console.log("⚡ New Alert Detected:", alert.id);
-      alertIdRef.current = alert.id; 
+      alertIdRef.current = alert.id;
       fetchOptions();
     }
-  }, [alert?.id]); 
+  }, [alert?.id]);
 
   const fetchOptions = async () => {
     try {
-      const opts = await getOptions();
-      setOptions(opts);
+      const res = await getOptions();
+      // Handle legacy (array) or new (object) response
+      if (Array.isArray(res)) {
+        setOptions(res);
+        setRejectedOptions([]);
+      } else {
+        setOptions(res.recommended || []);
+        setRejectedOptions(res.rejected || []);
+      }
     } catch (err) {
       console.error("Error fetching options:", err);
     }
@@ -37,8 +45,9 @@ function CollisionAlert({ alert, onResolve }) {
 
   // HELPER: Generate a STABLE score if the backend is missing it
   const getScore = (opt) => {
+    if (opt.confidence !== undefined) return opt.confidence; // Use numerical confidence from backend (0-100)
     if (opt.score) return Math.floor(opt.score * 100);
-    // Fake but Stable: "Hold" always gives the same number
+    // Fake but Stable fallback
     const hash = opt.action.length + opt.train.length + (opt.desc?.length || 0);
     return 85 + (hash % 14); // Returns a fixed number between 85-99
   };
@@ -62,12 +71,30 @@ function CollisionAlert({ alert, onResolve }) {
       </div>
 
       <div className="bg-white p-3 flex flex-col gap-2">
-        {options.length === 0 && (
+        {options.length === 0 && rejectedOptions.length === 0 && (
           <div className="text-center text-gray-500 py-4 text-sm animate-pulse">
             🤖 AI Brain Analyzing...
           </div>
         )}
-        
+
+        {/* REJECTED / SAFETY LAYER */}
+        {rejectedOptions.length > 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-2">
+            <div className="flex items-center gap-2 text-orange-800 mb-2">
+              <span className="text-xl">🛡️</span>
+              <span className="font-bold text-xs uppercase">Safety Intervention</span>
+            </div>
+            <div className="space-y-1">
+              {rejectedOptions.map((opt, i) => (
+                <div key={i} className="flex justify-between items-center text-xs text-orange-900/70 bg-orange-100/50 px-2 py-1 rounded">
+                  <span className="line-through">{opt.action}</span>
+                  <span className="font-mono text-[10px]">{opt.reason}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {options.map((opt, i) => (
           <button
             key={i}

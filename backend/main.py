@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
 from qdrant_client.models import PointStruct
-from sentence_transformers import SentenceTransformer
+from utils.embedding import get_vector
 from engine import simulation
 import os
 import uuid
@@ -19,9 +19,10 @@ print("🚀 Connecting to Qdrant...")
 client = QdrantClient(host="localhost", port=6333)
 COLLECTION_NAME = "golden_runs"
 
-print("🧠 Loading Embedding Model (all-MiniLM-L6-v2)...")
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-print("✅ Brain is ready.")
+# No more LLM loading!
+# print("🧠 Loading Embedding Model (all-MiniLM-L6-v2)...")
+# embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+print("✅ Brain is ready (Numeric Mode).")
 
 class ResolutionRequest(BaseModel):
     alert_id: str
@@ -29,7 +30,7 @@ class ResolutionRequest(BaseModel):
     action: str
 
 @app.get("/get_options")
-def get_options():
+def get_options(train_type: str = None):
     active_alert = next((a for a in simulation.state["alerts"] if not a["resolved"]), None)
     if not active_alert: return []
 
@@ -37,29 +38,40 @@ def get_options():
     victim_train = simulation.state["trains"].get(victim_id, {})
     location = active_alert["location"]
     
-    # 1. Context Construction
-    # Create a natural language query describing the current situation
-    query_text = f"{victim_train.get('type', 'Train')} train at {location} with speed {victim_train.get('current_speed', 0) * 100:.0f}km/h" # Speed is 0-1.0 in engine, mapping to roughly 0-300kmh visual, but here we construct text. 
-    # Actually looking at engine.py, speed is a float. In generate_history we used 0-300 int. 
-    # engine.py: max_speed 0.50. generate_history used 300. 
-    # Let's just use the raw values or a reasonable string for semantic match.
-    # The generated training data has "speed_kmh": 95. The engine has `current_speed`: 0.05.
-    # We should probably map engine speed to the domain of the training data if we want good matches.
-    # Engine 1.0 ~= 300km/h? Let's assume a mapping or just pass the text context loosely.
-    # User prompt said: `f"{victim_train['type']} train at {active_alert['location']} with speed {victim_train['current_speed']}km/h"`
-    # I will stick to what the user requested, but `current_speed` in engine is a float like 0.2. 
-    # It might be better to multiply by a factor to match the "90", "200" etc in training data. 
-    # But strictly following "Use these exact specs" from user.
-    # Wait, user prompt context Step 2.1: `speed {victim_train['current_speed']}km/h`.
-    # I will just use the value as is.
-    
-    # 2. Vector Search
-    vector = embedding_model.encode(query_text).tolist()
-    
+    # Context Awareness: Use filtered train_type or derive from state
+    if not train_type:
+         train_type = victim_train.get('type')
+
+    # 1. Context Construction & Vectorization
+    # ... (existing telemetry extraction) ...
+    current_speed_abstract = victim_train.get('current_speed', 0)
+    current_speed_kmh = current_speed_abstract * 300 
+
+    vector = get_vector(
+        speed_kmh=current_speed_kmh,
+        location=location,
+        weather="Clear",
+        train_id=victim_id
+    )
+
+    # 2. Vector Search with Context Filtering
+    # Only recall memories relevant to this specific train type (Safety)
+    query_filter = None
+    if train_type:
+        query_filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="train_type",
+                    match=models.MatchValue(value=train_type)
+                )
+            ]
+        )
+
     hits = client.query_points(
         collection_name=COLLECTION_NAME,
         query=vector,
-        limit=15 # Fetch more for filtering
+        query_filter=query_filter,
+        limit=15 
     ).points
     
     # 3. Diversity Re-Ranking (MMR Logic)
@@ -108,7 +120,19 @@ def get_options():
                     "cons": fb["cons"]
                 })
 
-    return final_options
+    # 4. Explainable Veto (Safety Layer)
+    # Split results into Recommended vs Rejected based on Physics
+    response = {"recommended": [], "rejected": []}
+    
+    for opt in final_options:
+        is_safe, reason = simulation.is_action_safe(opt["train"], opt["action"])
+        if is_safe:
+            response["recommended"].append(opt)
+        else:
+            opt["reason"] = reason
+            response["rejected"].append(opt)
+            
+    return response
 
 @app.post("/execute_option")
 def execute_option(req: ResolutionRequest):
@@ -129,7 +153,18 @@ def execute_option(req: ResolutionRequest):
         
         # 2. Vectorise
         print(f"🧮 Vectorising human feedback: {description}")
-        vector = embedding_model.encode(description).tolist()
+        
+        # We need speed_kmh for the new vectorizer.
+        # Assuming we can get it from train state or req? train state has 'current_speed'
+        current_speed_kmh = train.get('current_speed', 0) * 300
+
+        vector = get_vector(
+            speed_kmh=current_speed_kmh,
+            location=location,
+            weather=weather,
+            train_id=train_id
+        )
+        # vector = embedding_model.encode(description).tolist()
         
         # 3. Upsert to Qdrant (Golden Runs)
         point_id = str(uuid.uuid4())
@@ -173,9 +208,17 @@ def stats():
     satisfaction = 100 - (vetoes * 5) + (resolved * 0.5)
     satisfaction = max(0, min(100, satisfaction))
     
-    # Energy: 1.2 MWh per resolution
-    energy_val = resolved * 1.2
-    energy_saved = f"{energy_val:.1f} MWh"
+    # Real Energy: Convert Joules to MWh
+    # 1 Joule = 2.77778e-10 MWh
+    total_joules = simulation.state.get("total_energy_saved_joules", 0)
+    energy_mwh = total_joules * 2.77778e-10
+    
+    # Format dynamically: kWh if small, MWh if large
+    if energy_mwh < 1.0:
+        energy_kwh = total_joules / 3.6e6
+        energy_saved = f"{energy_kwh:.1f} kWh"
+    else:
+        energy_saved = f"{energy_mwh:.1f} MWh"
     
     return {
         "reliability": reliability,

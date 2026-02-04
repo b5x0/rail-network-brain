@@ -3,20 +3,18 @@ import os
 import sys
 
 try:
-    from sentence_transformers import SentenceTransformer
-    from qdrant_client import QdrantClient
+    from qdrant_client import QdrantClient, models
     from qdrant_client.models import PointStruct, VectorParams, Distance
+    from utils.embedding import get_vector
 except ImportError as e:
     print(f"❌ Missing dependencies: {e}")
-    print("Please run: pip install sentence-transformers qdrant-client")
     sys.exit(1)
 
 # Configuration
 QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
 COLLECTION_NAME = "golden_runs"
-MODEL_NAME = "all-MiniLM-L6-v2"
-VECTOR_SIZE = 384 # 384 dimensions for all-MiniLM-L6-v2
+VECTOR_SIZE = 16 # Normalized Physics Vector
 
 def main():
     print(f"🚀 Initializing Ingestion for {COLLECTION_NAME}...")
@@ -43,30 +41,60 @@ def main():
     print(f"📂 Loaded {len(data)} records from {data_path}")
 
     # 3. Initialize Model
-    print(f"🧠 Loading SentenceTransformer model: {MODEL_NAME}...")
-    model = SentenceTransformer(MODEL_NAME)
+    # No LLM needed!
+    # print(f"🧠 Loading SentenceTransformer model: {MODEL_NAME}...")
+    # model = SentenceTransformer(MODEL_NAME)
 
     # 4. Recreate Collection
-    print(f"🗑️  Recreating collection '{COLLECTION_NAME}' with size {VECTOR_SIZE}...")
-    client.recreate_collection(
+    print(f"🗑️  Recreating collection '{COLLECTION_NAME}' with size {VECTOR_SIZE} (Binary Quantized)...")
+    # Using delete + create is safer than recreate_collection (deprecated)
+    if client.collection_exists(COLLECTION_NAME):
+        client.delete_collection(COLLECTION_NAME)
+    
+    client.create_collection(
         collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE)
+        vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+        # Edge Optimization: Binary Quantization (32x compression, always in RAM)
+        quantization_config=models.BinaryQuantization(
+            binary=models.BinaryQuantizationConfig(always_ram=True)
+        )
     )
 
     # 5. Vectorize and Prepare Points
     print("⚡ Vectorizing and preparing batches...")
     points = []
     
-    # Batch processing for encoding is faster
-    descriptions = [item["description"] for item in data]
-    embeddings = model.encode(descriptions, show_progress_bar=True)
+    for i, item in enumerate(data):
+        # Context Extraction: Get 'train_type' from description
+        # Format: "{Type} train ({weight})..." -> Split by " train"
+        raw_desc = item.get("description", "")
+        train_type = raw_desc.split(" train")[0].strip() if " train" in raw_desc else "Unknown"
+        
+        # Inject extracted type into payload for filtering
+        item["train_type"] = train_type
 
-    for i, (item, vector) in enumerate(zip(data, embeddings)):
+        vector = get_vector(
+            speed_kmh=item.get("speed_kmh", 0),
+            location=item.get("location", "Unknown"),
+            weather=item.get("weather", "Clear"),
+            train_id=item.get("train_id", "Unknown")
+        )
         points.append(PointStruct(
             id=i,
-            vector=vector.tolist(),
+            vector=vector,
             payload=item
         ))
+
+    # SKIP: Batch processing for encoding is faster
+    # descriptions = [item["description"] for item in data]
+    # embeddings = model.encode(descriptions, show_progress_bar=True)
+
+    # for i, (item, vector) in enumerate(zip(data, embeddings)):
+    #     points.append(PointStruct(
+    #         id=i,
+    #         vector=vector.tolist(),
+    #         payload=item
+    #     ))
 
     # 6. Upload to Qdrant
     print(f"⬆️  Uploading {len(points)} points to Qdrant...")
