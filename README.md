@@ -68,7 +68,7 @@ A real-time "Glassmorphism" panel tracking KPIs:
 
 ### 1. Setup Backend
 ```bash
-git clone https://github.com/massar-rail/brain.git
+git clone https://github.com/b5x0/rail-network-brain.git
 cd rail-network-brain
 pip install -r backend/requirements.txt
 python backend/main.py
