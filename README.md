@@ -110,7 +110,7 @@ npm run dev
 ```mermaid
 graph TD
     A[Telemetry Stream] -->|Speed, Loc, Weather| B(Kinematic Encoder)
-    B -->|Vector [16]| C{Qdrant DB}
+    B -->|Vector 16D| C{Qdrant DB}
     C -->|Top-K Retrieval| D[Candidate Set]
     D -->|Safety Constraints| E[Physics Veto Engine]
     E -->|Approved Actions| F[Frontend Dashboard]
