@@ -72,6 +72,9 @@ def main():
         
         # Inject extracted type into payload for filtering
         item["train_type"] = train_type
+        
+        # MULTITENANCY: Default Operator
+        item["operator_id"] = "SNCFT"
 
         vector = get_vector(
             speed_kmh=item.get("speed_kmh", 0),

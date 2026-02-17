@@ -1,14 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from qdrant_client import QdrantClient, models
-from qdrant_client.models import PointStruct
+from qdrant_client.models import PointStruct, ContextExamplePair
 from utils.embedding import get_vector
 from engine import simulation
 import os
 import uuid
+import random
 
-app = FastAPI(title="RailBrain: Neural Search", version="4.0-NEURAL")
+app = FastAPI(title="RailBrain: Neuro-Symbolic Search", version="5.0-DISCOVERY")
 
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"]
@@ -16,21 +17,30 @@ app.add_middleware(
 
 # Initialize Qdrant and Embedding Model Globaly
 print("🚀 Connecting to Qdrant...")
-client = QdrantClient(host="localhost", port=6333)
+
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
+
+client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, api_key=QDRANT_API_KEY)
 COLLECTION_NAME = "golden_runs"
 
 # No more LLM loading!
 # print("🧠 Loading Embedding Model (all-MiniLM-L6-v2)...")
 # embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-print("✅ Brain is ready (Numeric Mode).")
+print(f"✅ Brain is ready (Numeric Mode) connected to {QDRANT_HOST}.")
 
 class ResolutionRequest(BaseModel):
     alert_id: str
     train_id: str
     action: str
+    operator_id: str = "SNCFT"
 
 @app.get("/get_options")
-def get_options(train_type: str = None):
+def get_options(train_type: str = None, operator_id: str = Header("SNCFT")):
+    """
+    Standard Nearest Neighbor Search (KNN).
+    """
     active_alert = next((a for a in simulation.state["alerts"] if not a["resolved"]), None)
     if not active_alert: return []
 
@@ -54,18 +64,22 @@ def get_options(train_type: str = None):
         train_id=victim_id
     )
 
-    # 2. Vector Search with Context Filtering
-    # Only recall memories relevant to this specific train type (Safety)
-    query_filter = None
-    if train_type:
-        query_filter = models.Filter(
-            must=[
-                models.FieldCondition(
-                    key="train_type",
-                    match=models.MatchValue(value=train_type)
-                )
-            ]
+    # 2. Vector Search with MULTITENANCY Filtering
+    # Only recall memories relevant to this specific train type AND Operator
+    must_filters = [
+        models.FieldCondition(
+            key="operator_id",
+            match=models.MatchValue(value=operator_id)
         )
+    ]
+    
+    if train_type:
+        must_filters.append(models.FieldCondition(
+            key="train_type",
+            match=models.MatchValue(value=train_type)
+        ))
+
+    query_filter = models.Filter(must=must_filters)
 
     hits = client.query_points(
         collection_name=COLLECTION_NAME,
@@ -134,6 +148,98 @@ def get_options(train_type: str = None):
             
     return response
 
+@app.get("/discover_resolution")
+def discover_resolution(operator_id: str = Header("SNCFT")):
+    """
+    advanced Discovery Search (Contextual Exploration).
+    Uses Qdrant's Discovery API to find resolutions by steering away from negative contexts.
+    """
+    active_alert = next((a for a in simulation.state["alerts"] if not a["resolved"]), None)
+    if not active_alert: return []
+
+    victim_id = active_alert["trains"][0]
+    victim_train = simulation.state["trains"].get(victim_id, {})
+    location = active_alert["location"]
+    
+    # Vectorize current state (Target)
+    current_speed_kmh = victim_train.get('current_speed', 0) * 300 
+    target_vector = get_vector(
+        speed_kmh=current_speed_kmh,
+        location=location,
+        weather="Clear", # TODO: Get real weather
+        train_id=victim_id
+    )
+
+    # 1. Define Context (Positive & Negative Pairs)
+    # In a real system, we'd query for specific IDs of known good/bad outcomes.
+    # Here, we simulate context by sampling:
+    # - Positive: Similar valid runs
+    # - Negative: Known accidents or vetoed actions
+    
+    # For demo, we just need ANY valid point ID as a positive anchor if we don't have labeled sets.
+    # We will do a quick scroll to find some points to use as context anchors.
+    # (In Production, these would be cached "proto-typical" event IDs)
+    
+    try:
+        sample_points = client.scroll(
+            collection_name=COLLECTION_NAME,
+            limit=5,
+            with_payload=True,
+            scroll_filter=models.Filter(
+                must=[models.FieldCondition(key="operator_id", match=models.MatchValue(value=operator_id))]
+            )
+        )[0]
+    except Exception:
+        return [] # No data to discover against
+
+    if not sample_points:
+        return []
+
+    # Naive Context Selection for Demo:
+    # Pick the first point as "Positive" and synthesize a "Negative" (none for now as we don't have tagged failures)
+    # Discovery API is best when you have explicit pairs.
+    # Here we steer TOWARDS similar successful runs.
+    
+    positive_id = sample_points[0].id
+    
+    # Discovery Query
+    print(f"🌌 Discovering resolution relative to anchor {positive_id}...")
+    
+    try:
+        discovered = client.discover_points(
+            collection_name=COLLECTION_NAME,
+            target=target_vector,
+            context=[
+                 ContextExamplePair(positive=positive_id, negative=None) 
+            ],
+            limit=5,
+            # Strict Multitenancy
+            lookup_filter=models.Filter(
+                must=[models.FieldCondition(key="operator_id", match=models.MatchValue(value=operator_id))]
+            )
+        ).points
+    except Exception as e:
+        print(f"Discovery Error: {e}")
+        return []
+
+    # Process Discovery Results
+    options = []
+    for hit in discovered:
+        action = hit.payload.get("action_taken")
+        if not action: continue
+        
+        options.append({
+            "action": action,
+            "train": victim_id,
+            "confidence": int(hit.score * 100) if hit.score < 1 else 95, # Discovery score isn't strictly cosine 0-1
+            "desc": f"Discovered via Context: {hit.payload.get('description')}",
+            "pros": "Contextually aligned resolution.",
+            "cons": "Novel suggestion."
+        })
+        
+    return {"discovered_options": options}
+
+
 @app.post("/execute_option")
 def execute_option(req: ResolutionRequest):
     # RLHF: One-Shot Learning Loop
@@ -144,18 +250,12 @@ def execute_option(req: ResolutionRequest):
         train_id = req.train_id
         train = simulation.state["trains"].get(train_id, {})
         location = active_alert["location"]
-        # Simplified weather capture (assuming 'Rainy' for now or extended state later if needed, 
-        # but prompt asked for specific string format)
-        weather = "Clear" # Default for now as weather isn't in alert directly, but good for template
+        weather = "Clear" 
         
-        # Format: "{alert_type} for {train_id} at {location} in {weather} weather. Human Operator action: {action_chosen}."
         description = f"Collision for {train_id} at {location} in {weather} weather. Human Operator action: {req.action}."
         
         # 2. Vectorise
         print(f"🧮 Vectorising human feedback: {description}")
-        
-        # We need speed_kmh for the new vectorizer.
-        # Assuming we can get it from train state or req? train state has 'current_speed'
         current_speed_kmh = train.get('current_speed', 0) * 300
 
         vector = get_vector(
@@ -164,7 +264,6 @@ def execute_option(req: ResolutionRequest):
             weather=weather,
             train_id=train_id
         )
-        # vector = embedding_model.encode(description).tolist()
         
         # 3. Upsert to Qdrant (Golden Runs)
         point_id = str(uuid.uuid4())
@@ -180,12 +279,13 @@ def execute_option(req: ResolutionRequest):
                         "location": location,
                         "description": description,
                         "incident_type": "Collision",
-                        "source": "human_feedback"
+                        "source": "human_feedback",
+                        "operator_id": req.operator_id  # MULTITENANCY
                     }
                 )
             ]
         )
-        print(f"[LEARNING LOOP] 🧠 Human feedback received. Upserted new strategy for Collision. AI is now smarter.")
+        print(f"[LEARNING LOOP] 🧠 Human feedback received for Operator {req.operator_id}.")
 
     with simulation.lock:
         simulation.apply_resolution(req.train_id, req.action)
@@ -226,6 +326,42 @@ def stats():
         "satisfaction": satisfaction,
         "veto_count": vetoes
     }
+
+@app.get("/benchmark_search")
+def benchmark_search(train_type: str = "Freight_Heavy", operator_id: str = Header("SNCFT")):
+    """
+    Dedicated endpoint for benchmarking Qdrant search speed without simulation state dependencies.
+    """
+    # Mock vector generation (CPU bound, similar to real scenario)
+    vector = get_vector(
+        speed_kmh=100,
+        location="Benchmark_Loc",
+        weather="Clear",
+        train_id="BENCH-001"
+    )
+
+    # 2. Vector Search with MULTITENANCY Filtering
+    must_filters = [
+        models.FieldCondition(
+            key="operator_id",
+            match=models.MatchValue(value=operator_id)
+        ),
+         models.FieldCondition(
+            key="train_type",
+            match=models.MatchValue(value=train_type)
+        )
+    ]
+
+    query_filter = models.Filter(must=must_filters)
+
+    hits = client.query_points(
+        collection_name=COLLECTION_NAME,
+        query=vector,
+        query_filter=query_filter,
+        limit=15 
+    ).points
+    
+    return {"hits": len(hits)}
 
 @app.post("/simulation/start")
 def start(): simulation.start()

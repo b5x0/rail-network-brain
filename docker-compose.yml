@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # 1. Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - app-network
+
+  # 2. Physics & Omni-Server (Backend)
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - QDRANT_HOST=qdrant # Service name resolution
+      - QDRANT_PORT=6333
+      # - QDRANT_API_KEY=your_cloud_key_here
+      - CORS_ORIGINS=*
+    depends_on:
+      - qdrant
+    networks:
+      - app-network
+
+  # 3. Dashboard (Frontend)
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80" # Map host 3000 to container 80 (nginx)
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  qdrant_data:
